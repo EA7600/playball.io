@@ -1,0 +1,558 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#eef1f8">
+<link rel="canonical" href="https://ea7600.github.io/playball.io/site/">
+<title>Ball</title>
+<meta name="description" content="Ball is a free one-tap physics puzzle you play in your browser. Aim, launch and bounce it into the goal across 999 levels, with 36 skins to collect.">
+<meta property="og:title" content="Ball: aim, launch, bounce it into the goal">
+<meta property="og:description" content="A free one-tap physics puzzle with 999 levels, 36 skins, Rush and Mirror modes. Play it right in your browser.">
+<meta property="og:image" content="https://ea7600.github.io/playball.io/site/og.png">
+<meta property="og:type" content="website">
+<meta name="twitter:card" content="summary_large_image">
+<link rel="icon" type="image/png" sizes="32x32" href="favicon-32.png">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fredoka:wght@500;600;700&family=Outfit:wght@400;500;600;700;800&family=Nunito:wght@500;700;800&family=M+PLUS+Rounded+1c:wght@500;700;800&display=swap">
+<style>
+/* Light is the default look; the moon button switches to dark (remembered on this device).
+   Layout: a game board. Dot-grid ground, one dotted aim line that runs down the whole page with Ball travelling along it
+   as you scroll, ending in the goal at the bottom. Sections sit on the board like boxes in a level. */
+:root {
+  --bg: #eef1f8; --bg-2: #e2e7f3; --surface: #ffffff; --surface-2: #f3f5fb; --ink: #151a2e; --ink-2: #545b78; --ink-3: #8a90aa; --line: #d7dcea;
+  --blue: #2f6dff; --blue-hi: #4f86ff; --blue-ink: #1d52e0; --on-blue: #ffffff; --violet: #6a4cff; --red: #ff3b4e; --gold: #ffc531; --gold-ink: #a86f00; --green: #22b86a;
+  --dot: rgba(36, 56, 120, .13); --aim: rgba(40, 60, 130, .3); --shadow: 0 18px 44px rgba(28, 40, 96, .13); --shadow-lg: 0 34px 80px rgba(28, 40, 96, .2);
+  --phone: #0c0d14; --chip: rgba(255, 255, 255, .78); --glass: rgba(255, 255, 255, .72);
+  --f-display: "Fredoka", "Nunito", "M PLUS Rounded 1c", "Outfit", ui-rounded, "SF Pro Rounded", "Hiragino Maru Gothic ProN", "Apple SD Gothic Neo", system-ui, sans-serif;
+  --f-body: "Outfit", "Nunito", "M PLUS Rounded 1c", ui-rounded, system-ui, -apple-system, "Segoe UI", "Hiragino Sans", "Apple SD Gothic Neo", "Malgun Gothic", sans-serif;
+  --r: 26px; --wrap: 1160px; --spring: cubic-bezier(.2, 1.35, .4, 1);
+}
+:root[data-theme="dark"] {
+  --bg: #12131a; --bg-2: #171925; --surface: #1d1f2c; --surface-2: #252838; --ink: #f1f2f8; --ink-2: #a8abc0; --ink-3: #6d7088; --line: #2c2f40;
+  --blue: #3f78ff; --blue-hi: #5d8dff; --blue-ink: #82a6ff; --on-blue: #ffffff; --violet: #8a72ff; --red: #ff5263; --gold: #ffc531; --gold-ink: #ffd25a; --green: #3ad283;
+  --dot: rgba(255, 255, 255, .07); --aim: rgba(200, 210, 255, .3); --shadow: 0 18px 44px rgba(0, 0, 0, .35); --shadow-lg: 0 34px 80px rgba(0, 0, 0, .5);
+  --phone: #050608; --chip: rgba(40, 43, 60, .78); --glass: rgba(29, 31, 44, .78); color-scheme: dark; }
+
+* { box-sizing: border-box; }
+html { scroll-behavior: smooth; scroll-padding-top: 84px; }
+body { margin: 0; font-family: var(--f-body); font-size: 17px; line-height: 1.55; color: var(--ink); background-color: var(--bg);
+  background-image: radial-gradient(circle at 1.5px 1.5px, var(--dot) 1.5px, transparent 1.7px); background-size: 26px 26px; overflow-x: hidden; -webkit-font-smoothing: antialiased; }
+body::before { content: ""; position: fixed; inset: 0 0 auto; height: env(safe-area-inset-top, 0px); z-index: 60; background: var(--bg); }
+img, video { max-width: 100%; display: block; }
+a { color: inherit; }
+h1, h2, h3 { font-family: var(--f-display); font-weight: 700; line-height: 1.05; letter-spacing: -.01em; margin: 0; text-wrap: balance; }
+p { margin: 0; text-wrap: pretty; }
+:lang(ko) { word-break: keep-all; }
+:lang(ja) :is(h1, h2, h3, b) { word-break: auto-phrase; }
+.wrap { max-width: var(--wrap); margin: 0 auto; padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); }
+.eyebrow { display: inline-flex; align-items: center; gap: 8px; font-size: 13px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; color: var(--blue-ink); }
+.lede { color: var(--ink-2); font-size: clamp(17px, 2.2vw, 20px); max-width: 34em; }
+:focus-visible { outline: 3px solid var(--blue); outline-offset: 3px; border-radius: 12px; }
+
+/* ---------- header ---------- */
+.top { position: sticky; top: env(safe-area-inset-top, 0px); z-index: 50; padding-block: 10px; }
+.top .bar { display: flex; align-items: center; gap: 14px; padding: 8px 8px 8px 16px; border-radius: 999px; background: var(--glass); -webkit-backdrop-filter: blur(14px) saturate(1.4); backdrop-filter: blur(14px) saturate(1.4); box-shadow: 0 6px 24px rgba(20, 30, 80, .1), 0 0 0 1px var(--line); }
+.top .brand { display: flex; align-items: center; gap: 8px; text-decoration: none; flex: none; }
+.top .brand img { height: 34px; width: auto; }
+.top nav { display: flex; gap: 2px; margin-left: auto; }
+.top nav a { text-decoration: none; font-weight: 600; font-size: 15px; color: var(--ink-2); padding: 8px 12px; border-radius: 999px; transition: background .2s, color .2s; }
+.top nav a:hover { background: var(--surface-2); color: var(--ink); }
+.langpick { position: relative; display: inline-flex; align-items: center; gap: 6px; height: 40px; padding: 0 12px 0 10px; border-radius: 999px; background: var(--surface-2); color: var(--ink); font-weight: 800; font-size: 13px; letter-spacing: .04em; cursor: pointer; flex: none; transition: transform .4s var(--spring); }
+.langpick:hover { transform: scale(1.05); }
+.langpick svg { width: 19px; height: 19px; fill: currentColor; }
+.langpick select { position: absolute; inset: 0; width: 100%; height: 100%; opacity: 0; cursor: pointer; font: inherit; color: var(--ink); background: var(--surface); }
+.langpick:focus-within { outline: 3px solid var(--blue); outline-offset: 2px; }
+.step h3 em { font-style: normal; }
+.iconbtn { width: 40px; height: 40px; border-radius: 50%; border: 0; display: grid; place-items: center; background: var(--surface-2); color: var(--ink); cursor: pointer; flex: none; transition: transform .4s var(--spring); }
+.iconbtn:hover { transform: rotate(-18deg) scale(1.08); }
+.iconbtn svg { width: 20px; height: 20px; fill: currentColor; }
+.iconbtn .sun { display: none; }
+:root[data-theme="dark"] .iconbtn .sun { display: block; } :root[data-theme="dark"] .iconbtn .moon { display: none; }
+.btn { display: inline-flex; align-items: center; justify-content: center; gap: 10px; border: 0; cursor: pointer; text-decoration: none; font-family: var(--f-display); font-weight: 600; font-size: 18px; letter-spacing: .01em;
+  padding: 14px 26px; border-radius: 999px; background: linear-gradient(180deg, var(--blue-hi), var(--blue)); color: var(--on-blue); box-shadow: 0 10px 24px rgba(47, 109, 255, .38), inset 0 -3px 0 rgba(0, 0, 40, .18);
+  transition: transform .45s var(--spring), box-shadow .25s; }
+.btn:hover { transform: translateY(-3px) scale(1.03); box-shadow: 0 16px 34px rgba(47, 109, 255, .46), inset 0 -3px 0 rgba(0, 0, 40, .18); }
+.btn:active { transform: scale(.95); }
+.btn img { width: 28px; height: 28px; margin: -6px -4px -6px -10px; }
+.btn.sm { font-size: 16px; padding: 10px 18px; }
+.btn.ghost { background: var(--surface); color: var(--ink); box-shadow: 0 0 0 2px var(--line); }
+.btn.ghost:hover { box-shadow: 0 0 0 2px var(--blue); }
+@media (max-width: 760px) { .top nav { display: none; } .top .bar { gap: 8px; } .top .bar .grow { margin-left: auto; } }
+@media (min-width: 761px) { .top .grow { display: none; } }
+
+/* ---------- the aim line down the page ---------- */
+main { position: relative; overflow-x: clip; }
+#aim { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; z-index: 0; overflow: visible; }
+#aim .rest { stroke: var(--aim); }
+#aim .done { stroke: var(--blue); }
+#rider { position: absolute; left: 0; top: 0; width: 46px; height: 46px; margin: -23px 0 0 -23px; pointer-events: none; z-index: 2; filter: drop-shadow(0 8px 10px rgba(20, 30, 90, .3)); will-change: transform; }
+section { position: relative; z-index: 1; }
+
+/* ---------- hero ---------- */
+.hero { padding-block: clamp(28px, 6vw, 70px) clamp(40px, 7vw, 90px); }
+.hero .grid { display: grid; grid-template-columns: minmax(0, 1.2fr) minmax(0, .8fr); gap: clamp(28px, 5vw, 60px); align-items: center; }
+.hero h1 { font-size: clamp(46px, 6.4vw, 82px); margin-top: 18px; }
+.hero h1 .b { color: var(--blue); display: inline-block; animation: boing 2.8s var(--spring) 1.1s infinite; transform-origin: 50% 90%; }
+@keyframes boing { 0%, 70%, 100% { transform: none; } 76% { transform: translateY(-14px) scaleY(1.06); } 84% { transform: translateY(0) scale(1.08, .9); } 90% { transform: none; } }
+.hero .lede { margin-top: 20px; }
+.hero .ctas { display: flex; gap: 12px; flex-wrap: wrap; margin-top: 30px; }
+.chips { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 30px; }
+.chip { display: inline-flex; align-items: center; gap: 8px; padding: 7px 14px 7px 8px; border-radius: 999px; background: var(--chip); box-shadow: 0 0 0 1px var(--line); font-weight: 600; font-size: 15px; -webkit-backdrop-filter: blur(6px); backdrop-filter: blur(6px); }
+.chip img { width: 26px; height: 26px; object-fit: contain; }
+.chip b { font-family: var(--f-display); font-weight: 700; }
+.pill-free { display: inline-flex; align-items: center; gap: 8px; padding: 6px 14px 6px 6px; border-radius: 999px; background: var(--surface); box-shadow: 0 0 0 1px var(--line), var(--shadow); font-weight: 600; font-size: 14px; color: var(--ink-2); }
+.pill-free i { width: 24px; height: 24px; border-radius: 50%; display: grid; place-items: center; background: var(--green); color: #fff; font-style: normal; font-weight: 800; font-size: 13px; }
+.stage { position: relative; display: grid; place-items: center; padding: 10px 0 20px; perspective: 1400px; }
+.phone { position: relative; width: min(330px, 78vw); aspect-ratio: 390 / 844; border-radius: 48px; padding: 11px; background: var(--phone); box-shadow: var(--shadow-lg), 0 0 0 2px rgba(255, 255, 255, .06) inset; transform-style: preserve-3d; }
+.phone::before { content: ""; position: absolute; top: 18px; left: 50%; width: 88px; height: 24px; margin-left: -44px; border-radius: 999px; background: #000; z-index: 2; }
+.phone video, .phone img.scr { width: 100%; height: 100%; object-fit: cover; border-radius: 38px; background: #12131a; }
+.phone.tilt-r { transform: rotateY(-16deg) rotateX(6deg) rotateZ(2deg); }
+.phone.tilt-l { transform: rotateY(16deg) rotateX(6deg) rotateZ(-2deg); }
+.hero .phone { transform: rotateY(-14deg) rotateX(8deg) rotateZ(3deg) translateY(var(--py, 0px)); transition: transform .8s var(--spring); }
+.hero .phone:hover { transform: rotateY(-4deg) rotateX(2deg) rotateZ(0deg) translateY(var(--py, 0px)); }
+.sticker { position: absolute; z-index: 3; filter: drop-shadow(0 12px 18px rgba(20, 30, 90, .3)); animation: float 5s ease-in-out infinite; }
+@keyframes float { 50% { transform: translateY(-12px) rotate(var(--rot, 4deg)); } }
+.sticker.goal { width: 92px; right: 2%; top: 4%; --rot: 8deg; }
+.sticker.hot { width: 108px; left: 0; bottom: 14%; animation-delay: -1.5s; --rot: -6deg; }
+.sticker.star { width: 70px; right: 6%; bottom: 8%; animation-delay: -3s; }
+.sticker.toast { left: -2%; top: 16%; padding: 8px 16px 8px 8px; display: flex; align-items: center; gap: 10px; border-radius: 999px; background: var(--surface); box-shadow: 0 0 0 2px var(--gold), var(--shadow); font-weight: 700; font-size: 15px; animation-delay: -2.2s; --rot: -3deg; }
+.sticker.toast img { width: 34px; height: 34px; }
+.sticker.toast small { display: block; font-size: 11px; letter-spacing: .06em; text-transform: uppercase; color: var(--gold-ink); }
+@media (max-width: 860px) { .hero .grid { grid-template-columns: minmax(0, 1fr); } .stage { margin-top: 6px; } .hero .phone { width: min(290px, 70vw); } .how .stage .phone { width: min(250px, 62vw); } #rider { width: 38px; height: 38px; margin: -19px 0 0 -19px; } }
+
+/* ---------- shared section bits ---------- */
+.sec { padding-block: clamp(56px, 9vw, 120px); }
+.sec-head { display: grid; gap: 14px; max-width: 760px; margin-bottom: clamp(30px, 5vw, 52px); }
+.sec-head h2 { font-size: clamp(36px, 5.4vw, 64px); }
+.card { background: var(--surface); border-radius: var(--r); box-shadow: 0 0 0 1px var(--line), var(--shadow); }
+
+/* ---------- how to play ---------- */
+.how { display: grid; grid-template-columns: minmax(0, .9fr) minmax(0, 1.1fr); gap: clamp(26px, 5vw, 64px); align-items: center; }
+.steps { display: grid; gap: 14px; counter-reset: s; }
+.step { display: grid; grid-template-columns: 76px minmax(0, 1fr); gap: 16px; align-items: center; padding: 16px 20px 16px 16px; text-align: left; border: 0; cursor: pointer; font: inherit; color: inherit; transition: transform .45s var(--spring), box-shadow .25s; }
+.step:hover { transform: translateX(6px); }
+.step.on { box-shadow: 0 0 0 3px var(--blue), var(--shadow); }
+.step img { width: 76px; height: 76px; }
+.step h3 { font-size: 24px; display: flex; gap: 10px; align-items: baseline; }
+.step h3 span { font-family: var(--f-body); font-size: 13px; font-weight: 800; letter-spacing: .08em; color: var(--blue-ink); }
+.step p { color: var(--ink-2); font-size: 16px; margin-top: 4px; }
+.how .stage .phone { width: min(320px, 74vw); }
+.meet { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 26px; }
+.meet .chip { font-weight: 600; padding: 8px 14px; }
+.meet .chip i { width: 12px; height: 12px; border-radius: 3px; display: inline-block; }
+@media (max-width: 860px) { .how { grid-template-columns: minmax(0, 1fr); } .how .stage { order: -1; } }
+
+/* ---------- skins ---------- */
+.custom h2 { font-size: clamp(46px, 8.4vw, 112px); line-height: .95; }
+.custom h2 .w { display: inline-block; color: var(--blue); }
+.custom h2 .w:nth-child(2) { color: var(--violet); transform: rotate(-2deg); }
+.marquee { --gap: 18px; overflow: hidden; padding-block: 8px; display: grid; gap: 14px; margin-top: 12px; mask-image: linear-gradient(90deg, transparent, #000 8%, #000 92%, transparent); -webkit-mask-image: linear-gradient(90deg, transparent, #000 8%, #000 92%, transparent); }
+.lane { display: flex; gap: var(--gap); width: max-content; animation: lane 60s linear infinite; }
+.lane.rev { animation-direction: reverse; animation-duration: 70s; }
+.marquee:hover .lane { animation-play-state: paused; }
+@keyframes lane { to { transform: translateX(calc(-50% - var(--gap) / 2)); } }
+.sk { flex: none; width: 116px; display: grid; justify-items: center; gap: 4px; text-align: center; }
+.sk .ball { width: 104px; height: 104px; display: grid; place-items: center; border-radius: 50%; background: var(--surface); box-shadow: 0 0 0 1px var(--line), 0 10px 24px rgba(20, 30, 90, .1); transition: transform .5s var(--spring); }
+.sk:hover .ball { transform: translateY(-6px) rotate(-8deg) scale(1.06); }
+.sk img { width: 86px; height: 86px; object-fit: contain; }
+.sk.leg img { width: 104px; height: 104px; }
+.sk b { font-size: 14px; font-weight: 700; }
+.sk small { font-size: 12px; color: var(--ink-3); font-weight: 600; margin-top: -4px; }
+.trails { display: grid; grid-template-columns: minmax(0, 1.2fr) minmax(0, .8fr); gap: clamp(22px, 4vw, 48px); align-items: center; margin-top: clamp(40px, 6vw, 70px); }
+.wide { position: relative; border-radius: 30px; overflow: hidden; background: #12131a; box-shadow: var(--shadow-lg); transform: rotate(-1.5deg); }
+.wide video { width: 100%; aspect-ratio: 390 / 320; object-fit: cover; }
+.wide .tag { position: absolute; left: 14px; top: 14px; padding: 5px 12px; border-radius: 999px; background: rgba(255, 255, 255, .16); color: #fff; font-size: 13px; font-weight: 700; -webkit-backdrop-filter: blur(8px); backdrop-filter: blur(8px); }
+.trails h3 { font-size: clamp(30px, 3.6vw, 42px); }
+.trails p { color: var(--ink-2); margin-top: 12px; }
+@media (max-width: 860px) { .trails { grid-template-columns: minmax(0, 1fr); } }
+
+.secret { display: grid; grid-template-columns: 168px minmax(0, 1fr); gap: 18px; align-items: center; margin-top: clamp(34px, 5vw, 60px); padding: 18px 22px 18px 18px; border-radius: 26px;
+  background: linear-gradient(135deg, #1b1340, #2a1f75); color: #fff; box-shadow: var(--shadow); overflow: hidden; position: relative; }
+.secret img { width: 168px; height: auto; animation: float 4s ease-in-out infinite; --rot: -3deg; }
+@media (max-width: 520px) { .secret { grid-template-columns: minmax(0, 1fr); justify-items: start; } .secret img { width: 150px; } }
+.secret b { font-family: var(--f-display); font-size: 24px; font-weight: 600; }
+.secret p { color: rgba(235, 230, 255, .85); font-size: 15.5px; margin-top: 4px; }
+.secret::after { content: "?"; position: absolute; right: 18px; bottom: -34px; font-family: var(--f-display); font-weight: 700; font-size: 160px; color: rgba(255, 255, 255, .06); line-height: 1; }
+
+/* ---------- modes ---------- */
+.modes { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: clamp(18px, 3vw, 30px); }
+.mode { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 18px; align-items: end; padding: clamp(20px, 3vw, 30px); overflow: hidden; }
+.mode .txt { align-self: start; display: grid; gap: 10px; }
+.mode img.ic { width: 64px; height: 64px; }
+.mode h3 { font-size: clamp(30px, 3.6vw, 40px); }
+.mode p { color: var(--ink-2); font-size: 16px; }
+.mode .phone { width: clamp(150px, 17vw, 200px); border-radius: 30px; padding: 7px; margin-bottom: -60px; }
+.mode .phone::before { top: 12px; width: 54px; height: 16px; margin-left: -27px; }
+.mode .phone video { border-radius: 24px; }
+.mode:nth-child(1) .phone { transform: rotate(6deg); } .mode:nth-child(2) .phone { transform: rotate(-6deg); }
+.levels { display: grid; grid-template-columns: minmax(0, .9fr) minmax(0, 1.1fr); gap: clamp(22px, 4vw, 48px); align-items: center; margin-top: clamp(30px, 5vw, 50px); padding: clamp(22px, 3.5vw, 40px); overflow: hidden; }
+.levels h3 { font-size: clamp(30px, 3.6vw, 42px); }
+.levels p { color: var(--ink-2); margin-top: 12px; }
+.levels .big { font-family: var(--f-display); font-weight: 700; font-size: clamp(80px, 12vw, 150px); line-height: .9; color: var(--blue); letter-spacing: -.03em; display: flex; align-items: center; gap: 12px; }
+.levels .big img { width: clamp(64px, 9vw, 110px); }
+.duo { position: relative; height: clamp(320px, 38vw, 430px); }
+.duo .phone { position: absolute; width: clamp(150px, 19vw, 210px); border-radius: 30px; padding: 7px; }
+.duo .phone::before { top: 12px; width: 54px; height: 16px; margin-left: -27px; }
+.duo .phone img.scr { border-radius: 24px; }
+.duo .p1 { left: 6%; top: 6%; transform: rotate(-8deg) translateY(var(--py, 0px)); z-index: 1; }
+.duo .p2 { left: 36%; top: 0; transform: rotate(3deg) translateY(calc(var(--py, 0px) * -0.6)); z-index: 2; }
+.duo .p3 { right: 2%; top: 10%; transform: rotate(10deg) translateY(var(--py, 0px)); }
+@media (max-width: 860px) { .modes, .levels { grid-template-columns: minmax(0, 1fr); } .duo { height: 360px; } .duo .p2 { left: 30%; } }
+@media (max-width: 520px) { .mode { grid-template-columns: minmax(0, 1fr); } .mode .phone { justify-self: center; margin-bottom: -90px; width: 170px; } .duo { height: 300px; } }
+
+/* ---------- more ---------- */
+.feat { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 16px; }
+.f { display: grid; grid-template-columns: 64px minmax(0, 1fr); gap: 14px; padding: 18px; align-items: start; }
+.f img { width: 64px; height: 64px; object-fit: contain; }
+.f b { font-family: var(--f-display); font-size: 21px; font-weight: 600; display: block; line-height: 1.15; }
+.f p { color: var(--ink-2); font-size: 15px; margin-top: 4px; }
+@media (max-width: 900px) { .feat { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+@media (max-width: 560px) { .feat { grid-template-columns: minmax(0, 1fr); } }
+.inboxrow { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: clamp(22px, 4vw, 48px); align-items: center; margin-top: clamp(36px, 6vw, 64px); }
+.inboxrow h3 { font-size: clamp(30px, 3.6vw, 42px); }
+.inboxrow p { color: var(--ink-2); margin-top: 12px; }
+@media (max-width: 860px) { .inboxrow { grid-template-columns: minmax(0, 1fr); } }
+
+/* ---------- app ---------- */
+.appcard { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: clamp(20px, 4vw, 44px); padding: clamp(22px, 4vw, 44px); }
+.appcard h2 { font-size: clamp(34px, 4.6vw, 54px); }
+.appcard .lede { margin-top: 12px; }
+.how-add { display: grid; gap: 12px; }
+.how-add div { padding: 16px 18px; border-radius: 20px; background: var(--surface-2); }
+.how-add b { display: block; font-family: var(--f-display); font-weight: 600; font-size: 19px; }
+.how-add span { color: var(--ink-2); font-size: 15.5px; }
+.kbd { display: inline-block; padding: 1px 8px; border-radius: 8px; background: var(--surface); box-shadow: 0 0 0 1px var(--line); font-weight: 700; color: var(--ink); }
+@media (max-width: 760px) { .appcard { grid-template-columns: minmax(0, 1fr); } }
+
+/* ---------- finale ---------- */
+.finale { text-align: center; padding-block: clamp(70px, 10vw, 130px) clamp(60px, 8vw, 100px); }
+.finale h2 { font-size: clamp(44px, 7vw, 86px); }
+.finale p { color: var(--ink-2); margin: 16px auto 0; max-width: 30em; }
+.goalspot { position: relative; width: 150px; height: 150px; margin: 0 auto 26px; }
+.goalspot img { width: 100%; height: 100%; }
+.goalspot::after { content: ""; position: absolute; inset: -14px; border-radius: 50%; border: 4px solid var(--red); opacity: 0; }
+.finale.scored .goalspot img { animation: goalPop .7s var(--spring); }
+.finale.scored .goalspot::after { animation: ring 1s ease-out; }
+@keyframes goalPop { 40% { transform: scale(1.18) rotate(-8deg); } }
+@keyframes ring { from { opacity: .9; transform: scale(.7); } to { opacity: 0; transform: scale(1.6); } }
+.conf { position: absolute; left: 50%; top: 50%; width: 9px; height: 14px; border-radius: 2px; pointer-events: none; animation: conf 1.1s cubic-bezier(.15, .7, .3, 1) forwards; }
+@keyframes conf { to { transform: translate(var(--x), var(--y)) rotate(var(--r)); opacity: 0; } }
+footer { padding-block: 34px calc(34px + env(safe-area-inset-bottom, 0px)); border-top: 1px solid var(--line); color: var(--ink-2); font-size: 15px; position: relative; z-index: 1; background: var(--bg); }
+footer .wrap { display: flex; flex-wrap: wrap; gap: 14px 28px; align-items: center; justify-content: space-between; }
+footer img { height: 30px; width: auto; }
+footer a { color: var(--blue-ink); font-weight: 600; }
+footer .mail { user-select: all; }
+
+/* entrance: everything is visible at rest; an element plays a short pop the first time it scrolls into view */
+.pop.go { animation: popIn .8s var(--spring) backwards; animation-delay: calc(var(--d, 0) * 90ms); }
+@keyframes popIn { from { transform: translateY(34px) scale(.97); } }
+@media (prefers-reduced-motion: reduce) { *, *::before, *::after { animation: none !important; transition: none !important; } html { scroll-behavior: auto; } #rider { display: none; } }
+</style>
+
+</head>
+<body>
+<header class="top">
+  <div class="wrap">
+    <div class="bar">
+      <a class="brand" href="#top" aria-label="Ball, back to top" data-ia="brand_aria"><img src="media/logo.webp" alt="Ball" width="85" height="34"></a>
+      <nav aria-label="Sections" data-ia="nav_aria"><a href="#how" data-i="nav_how">How to play</a><a href="#skins" data-i="nav_skins">Skins</a><a href="#modes" data-i="nav_modes">Modes</a><a href="#more" data-i="nav_more">More</a></nav>
+      <span class="grow"></span>
+      <label class="langpick" title="Language"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M11.99 2C6.47 2 2 6.48 2 12s4.47 10 9.99 10C17.52 22 22 17.52 22 12S17.52 2 11.99 2zm6.93 6h-2.95a15.65 15.65 0 0 0-1.38-3.56A8.03 8.03 0 0 1 18.92 8zM12 4.04c.83 1.2 1.48 2.53 1.91 3.96h-3.82c.43-1.43 1.08-2.76 1.91-3.96zM4.26 14C4.1 13.36 4 12.69 4 12s.1-1.36.26-2h3.38c-.08.66-.14 1.32-.14 2s.06 1.34.14 2H4.26zm.82 2h2.95c.32 1.25.78 2.45 1.38 3.56A7.99 7.99 0 0 1 5.08 16zm2.95-8H5.08a7.99 7.99 0 0 1 4.33-3.56A15.65 15.65 0 0 0 8.03 8zM12 19.96c-.83-1.2-1.48-2.53-1.91-3.96h3.82c-.43 1.43-1.08 2.76-1.91 3.96zM14.34 14H9.66c-.09-.66-.16-1.32-.16-2s.07-1.35.16-2h4.68c.09.65.16 1.32.16 2s-.07 1.34-.16 2zm.25 5.56c.6-1.11 1.06-2.31 1.38-3.56h2.95a8.03 8.03 0 0 1-4.33 3.56zM16.36 14c.08-.66.14-1.32.14-2s-.06-1.34-.14-2h3.38c.16.64.26 1.31.26 2s-.1 1.36-.26 2h-3.38z"/></svg><span id="lang-code">EN</span><select id="lang" aria-label="Language" data-ia="lang_aria"></select></label>
+      <button class="iconbtn" id="theme" type="button" aria-label="Switch between light and dark mode" data-ia="theme_aria">
+        <svg class="moon" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3a9 9 0 1 0 9 9c0-.46-.04-.92-.1-1.36a5.39 5.39 0 0 1-4.4 2.26 5.4 5.4 0 0 1-3.14-9.8c-.44-.06-.9-.1-1.36-.1z"/></svg>
+        <svg class="sun" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 7a5 5 0 1 0 0 10 5 5 0 0 0 0-10zM11 1h2v3h-2zm0 19h2v3h-2zM1 11h3v2H1zm19 0h3v2h-3zM4.2 5.6l1.4-1.4 2.1 2.1-1.4 1.4zm12.1 12.1 1.4-1.4 2.1 2.1-1.4 1.4zM16.3 6.3l2.1-2.1 1.4 1.4-2.1 2.1zM4.2 18.4l2.1-2.1 1.4 1.4-2.1 2.1z"/></svg>
+      </button>
+      <a class="btn sm" href="https://ea7600.github.io/playball.io/" data-i="play">Play</a>
+    </div>
+  </div>
+</header>
+
+<main id="top">
+  <svg id="aim" aria-hidden="true">
+    <defs><mask id="aim-mask" maskUnits="userSpaceOnUse"><path id="aim-m" fill="none" stroke="#fff" stroke-width="40" stroke-linecap="round"/></mask></defs>
+    <path class="rest" id="aim-p" fill="none" stroke-width="5" stroke-linecap="round" stroke-dasharray="0 17"/>
+    <path class="done" id="aim-d" fill="none" stroke-width="6" stroke-linecap="round" stroke-dasharray="0 17" mask="url(#aim-mask)"/>
+  </svg>
+  <img id="rider" src="media/ball_up.webp" alt="" width="46" height="46">
+
+  <!-- hero -->
+  <section class="hero">
+    <div class="wrap grid">
+      <div class="copy">
+        <span class="pill-free"><i>✓</i><span data-i="free">Free to play, right in your browser</span></span>
+        <h1 data-i="h1">Aim. Launch. <span class="b">Bounce</span> it into the goal.</h1>
+        <p class="lede" data-i="lede">Ball is a one-tap physics puzzle. Pull back, let go, and bank shots off the walls to land Ball in the goal in as few launches as you can.</p>
+        <div class="ctas">
+          <a class="btn" href="https://ea7600.github.io/playball.io/" data-way="start"><img src="media/ball_wink.webp" alt=""><span data-i="cta_play">Play free now</span></a>
+          <a class="btn ghost" href="#how" data-i="cta_how">See how it works</a>
+        </div>
+        <div class="chips">
+          <span class="chip"><img src="media/i-levels.png" alt=""><span data-i="chip_levels"><b>999</b> levels</span></span>
+          <span class="chip"><img src="media/i-skins.png" alt=""><span data-i="chip_skins"><b>36</b> skins, plus secrets</span></span>
+          <span class="chip"><img src="media/i-lang.png" alt=""><span data-i="chip_lang"><b>10</b> languages</span></span>
+          <span class="chip"><img src="media/i-stars.png" alt=""><span data-i="chip_stars">Stars to chase</span></span>
+        </div>
+      </div>
+      <div class="stage">
+        <div class="phone" data-par="0.05"><video src="media/play.mp4" poster="media/play.jpg" muted loop playsinline autoplay preload="metadata" data-ia="vid_play" aria-label="A level of Ball being played: aiming, bouncing off a pad, pressing the numbered buttons and landing in the goal"></video></div>
+        <img class="sticker goal" src="media/goal.webp" alt="">
+        <img class="sticker hot" src="media/skins/hothead.webp" alt="">
+        <img class="sticker star" src="media/i-stars.png" alt="">
+        <div class="sticker toast"><img src="media/ball_wink.webp" alt=""><span><small data-i="toast_small">Level 11</small><span data-i="toast">Level cleared!</span></span></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- how to play -->
+  <section class="sec" id="how">
+    <div class="wrap">
+      <div class="sec-head pop"><span class="eyebrow" data-i="how_eyebrow">How to play</span><h2 data-way="l" data-i="how_h2">Three moves. That’s the whole game.</h2><p class="lede" data-i="how_lede">You’ll get it in ten seconds. Mastering 999 levels takes a little longer.</p></div>
+      <div class="how">
+        <div>
+          <div class="steps" role="list">
+            <button class="step card pop on" data-t="0.9" role="listitem" style="--d:0"><img src="media/s-aim.png" alt=""><span><h3><span>1</span><em data-i="s1_t">Drag back</em></h3><p data-i="s1_d">Touch anywhere on the board and pull. The dotted line shows exactly where Ball will fly.</p></span></button>
+            <button class="step card pop" data-t="2.1" role="listitem" style="--d:1"><img src="media/s-launch.png" alt=""><span><h3><span>2</span><em data-i="s2_t">Let go</em></h3><p data-i="s2_d">Ball launches, bouncing off walls and pads and slowing a little with every hit.</p></span></button>
+            <button class="step card pop" data-t="11.6" role="listitem" style="--d:2"><img src="media/s-goal.png" alt=""><span><h3><span>3</span><em data-i="s3_t">Open the goal, land it</em></h3><p data-i="s3_d">From level 2 the goal starts locked. Press every button to open it, then roll in. Fewer launches earn more stars.</p></span></button>
+          </div>
+          <div class="meet" aria-label="Things you’ll meet on the board" data-ia="meet_aria">
+            <span class="chip"><i style="background:#ff4d6d"></i><span data-i="meet_btn">Buttons, some numbered</span></span>
+            <span class="chip"><i style="background:#ffd23f"></i><span data-i="meet_pad">Bounce pads</span></span>
+            <span class="chip"><i style="background:#ffffff;box-shadow:0 0 0 1px var(--line)"></i><span data-i="meet_spike">Spikes that sting</span></span>
+            <span class="chip"><i style="background:#26d0ff"></i><span data-i="meet_tp">Teleporters</span></span>
+            <span class="chip"><i style="background:var(--gold)"></i><span data-i="meet_stars">Up to 3 stars a level</span></span>
+          </div>
+        </div>
+        <div class="stage"><div class="phone tilt-l" data-par="0.04"><video id="howvid" src="media/play.mp4" poster="media/play.jpg" muted loop playsinline preload="metadata" data-ia="vid_how" aria-label="Gameplay: aim, launch, goal"></video></div></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- skins -->
+  <section class="sec custom" id="skins">
+    <div class="wrap">
+      <div class="sec-head pop"><span class="eyebrow" data-i="sk_eyebrow">The wardrobe</span><h2 data-way="r" data-i="sk_h2"><span class="w">Loads of</span> <span class="w">customizing!</span></h2>
+        <p class="lede" data-i="sk_lede">Unlock 36 skins just by playing. Every one has its own trail, launch burst and little extras floating around Ball.</p></div>
+    </div>
+    <div class="marquee" aria-label="Some of the skins in Ball" data-ia="marquee_aria">
+      <div class="lane" id="lane1"></div>
+      <div class="lane rev" id="lane2"></div>
+    </div>
+    <div class="wrap">
+      <div class="trails">
+        <div class="wide pop" data-way="l"><video src="media/trails.mp4" poster="media/trails.jpg" muted loop playsinline preload="metadata" data-ia="vid_trails" aria-label="Glitch Mode, Eight Ball and Disco Ball each launched across the same level, each leaving a different trail"></video><span class="tag" data-i="trails_tag">Same shot, three skins</span></div>
+        <div class="pop" style="--d:1"><h3 data-i="trails_h3">Every skin flies its own way.</h3><p data-i="trails_p">A burst of glitchy pixels, a streak of chalk dust, a shower of disco sparkles. Pick a skin and every launch, bounce and goal looks different.</p></div>
+      </div>
+
+      <div class="secret pop" data-way="r"><img src="media/secret.webp" data-ialt="secret_alt" alt="Ball winking next to two mystery skins with question marks" width="168" height="120"><span><b data-i="secret_t">Psst… there’s more.</b><p data-i="secret_p">Not every skin shows up in the wardrobe. Some stay hidden until you find them, so keep playing and keep your eyes open.</p></span></div>
+    </div>
+  </section>
+
+  <!-- modes -->
+  <section class="sec" id="modes">
+    <div class="wrap">
+      <div class="sec-head pop"><span class="eyebrow" data-i="modes_eyebrow">Modes</span><h2 data-way="l" data-i="modes_h2">Two more ways to play.</h2><p class="lede" data-i="modes_lede">When the levels need a break, race the clock or play two boxes at once.</p></div>
+      <div class="modes">
+        <article class="mode card pop"><div class="txt"><img class="ic" src="media/i-rush.png" alt=""><h3 data-i="rush_t">Rush</h3><p data-i="rush_p">60 seconds on the clock. Every level you clear adds 10 seconds, every hit takes 3 away. How far can you get?</p></div>
+          <div class="phone"><video src="media/rush.mp4" poster="media/rush.jpg" muted loop playsinline preload="metadata" data-ia="vid_rush" aria-label="Rush mode: the timer counts down while levels are cleared"></video></div></article>
+        <article class="mode card pop" style="--d:1" data-way="r"><div class="txt"><img class="ic" src="media/i-mirror.png" alt=""><h3 data-i="mirror_t">Mirror</h3><p data-i="mirror_p">Two boxes, one shot. Aim in the bottom box and the top ball copies you, flipped left to right. Get both home.</p></div>
+          <div class="phone"><video src="media/mirror.mp4" poster="media/mirror.jpg" muted loop playsinline preload="metadata" data-ia="vid_mirror" aria-label="Mirror mode: one aim moves two balls in two boxes"></video></div></article>
+      </div>
+      <div class="levels card pop">
+        <div><div class="big"><img src="media/i-stars.png" alt="">999</div><h3 data-i="levels_h3">Levels made just for you.</h3><p data-i="levels_p">Every player’s levels are built from their own random seed, so nobody plays the same boxes you do. Replay any level from the Levels calendar to chase the stars you missed, and watch the difficulty climb from Easy to Super Hard.</p></div>
+        <div class="duo" aria-hidden="true">
+          <div class="phone p1" data-par="0.04"><img class="scr" data-th="levels" src="media/shot-levels-dark.webp" alt=""></div>
+          <div class="phone p2" data-par="0.03"><img class="scr" data-th="home" src="media/shot-home-dark.webp" alt=""></div>
+          <div class="phone p3" data-par="0.05"><img class="scr" data-th="records" src="media/shot-records-dark.webp" alt=""></div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- more -->
+  <section class="sec" id="more">
+    <div class="wrap">
+      <div class="sec-head pop"><span class="eyebrow" data-i="more_eyebrow">And there’s more</span><h2 data-way="r" data-i="more_h2">Little things that make it yours.</h2></div>
+      <div class="feat">
+        <div class="f card pop"><img src="media/i-ach.png" alt=""><span><b data-i="f1_t">Achievements and records</b><p data-i="f1_p">From your first bounce to your best Rush run, everything gets counted.</p></span></div>
+        <div class="f card pop" style="--d:1"><img src="media/i-assist.png" alt=""><span><b data-i="f2_t">Assisted mode</b><p data-i="f2_p">Stuck? Aim snaps to good shots and a ghost ball can show you one that works.</p></span></div>
+        <div class="f card pop" style="--d:2"><img src="media/i-lang.png" alt=""><span><b data-i="f3_t">10 languages</b><p data-i="f3_p">English, Deutsch, Français, Italiano, 日本語, 한국어, Português, Русский, Español and Türkçe.</p></span></div>
+        <div class="f card pop"><img src="media/ach-wardrobe.webp" alt=""><span><b data-i="f4_t">Wardrobe Warrior</b><p data-i="f4_p">An achievement for the ones who collect every single skin.</p></span></div>
+        <div class="f card pop" style="--d:1"><img src="media/wink.png" alt=""><span><b data-i="f5_t">Light and dark</b><p data-i="f5_p">Pick the look you like, with sound effects and vibration on phones.</p></span></div>
+        <div class="f card pop" style="--d:2"><img src="media/shush.png" alt=""><span><b data-i="f6_t">Secrets in the house</b><p data-i="f6_p">Ball’s house hides a couple of skins. Poke around.</p></span></div>
+      </div>
+      <div class="inboxrow">
+        <div class="pop"><span class="eyebrow" data-i="inbox_eyebrow">New</span><h3 style="margin-top:10px" data-i="inbox_h3">Inbox and Gifts.</h3><p data-i="inbox_p">News about the game lands in your Inbox. Gifts from the Ball team, and rewards from promo codes, wait for you in Gifts. Got an idea? Settings → Send feedback goes straight to us.</p></div>
+        <div class="duo" aria-hidden="true" style="height:clamp(300px,34vw,400px)">
+          <div class="phone p1" data-par="0.03" style="left:12%"><img class="scr" data-th="inbox" src="media/shot-inbox-dark.webp" alt=""></div>
+          <div class="phone p3" data-par="0.05" style="right:10%"><img class="scr" data-th="gifts" src="media/shot-gifts-dark.webp" alt=""></div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- app -->
+  <section class="sec" style="padding-top:0">
+    <div class="wrap">
+      <div class="appcard card pop" data-way="l">
+        <div><span class="eyebrow" data-i="app_eyebrow">No download</span><h2 style="margin-top:10px" data-i="app_h2">Play it like an app.</h2><p class="lede" data-i="app_lede">Open Ball on your phone and add it to your home screen. It opens full screen, and your progress saves on your device automatically.</p></div>
+        <div class="how-add">
+          <div><b data-i="ios_t">iPhone or iPad (Safari)</b><span data-i="ios">Tap <span class="kbd">Share</span>, then <span class="kbd">Add to Home Screen</span>.</span></div>
+          <div><b data-i="and_t">Android (Chrome)</b><span data-i="and">Tap <span class="kbd">⋮</span>, then <span class="kbd">Add to Home screen</span> or <span class="kbd">Install app</span>.</span></div>
+          <div><b data-i="pc_t">Computer</b><span data-i="pc">It plays right in the browser. Click and drag to aim.</span></div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- finale -->
+  <section class="finale" id="play">
+    <div class="wrap">
+      <div class="goalspot" id="goalspot" data-way="end"><img src="media/goal.webp" alt=""></div>
+      <h2 data-i="fin_h2">Your first level is waiting.</h2>
+      <p data-i="fin_p">Free, in your browser, on any phone or computer.</p>
+      <div style="margin-top:28px"><a class="btn" href="https://ea7600.github.io/playball.io/" style="font-size:22px;padding:18px 34px"><img src="media/ball_happy.webp" alt=""><span data-i="fin_btn">Play Ball</span></a></div>
+    </div>
+  </section>
+</main>
+
+<footer>
+  <div class="wrap">
+    <img src="media/logo.webp" alt="Ball" width="75" height="30">
+    <span><span data-i="foot_fb">Ideas or feedback?</span> <a href="mailto:ballplaynow@gmail.com" class="mail">ballplaynow@gmail.com</a></span>
+    <span data-i="foot_made">Made by Enzo Augusto</span>
+  </div>
+</footer>
+
+<script>
+/*I18N*/const I18N = {"langs":[["en","English"],["de","Deutsch"],["fr","Français"],["it","Italiano"],["ja","日本語"],["ko","한국어"],["pt-BR","Português (Brasil)"],["ru","Русский"],["es","Español"],["tr","Türkçe"]],"str":{"en":{"title":"Ball: aim, launch, bounce it into the goal","desc":"Ball is a free one-tap physics puzzle you play in your browser. Aim, launch and bounce it into the goal across 999 levels, with 36 skins to collect.","nav_how":"How to play","nav_skins":"Skins","nav_modes":"Modes","nav_more":"More","play":"Play","theme_aria":"Switch between light and dark mode","lang_aria":"Language","brand_aria":"Ball, back to top","nav_aria":"Sections","free":"Free to play, right in your browser","h1":"Aim. Launch. <span class=\"b\">Bounce</span> it into the goal.","lede":"Ball is a one-tap physics puzzle. Pull back, let go, and bank shots off the walls to land Ball in the goal in as few launches as you can.","cta_play":"Play free now","cta_how":"See how it works","chip_levels":"<b>999</b> levels","chip_skins":"<b>36</b> skins, plus secrets","chip_lang":"<b>10</b> languages","chip_stars":"Stars to chase","toast_small":"Level 11","toast":"Level cleared!","vid_play":"A level of Ball being played: aiming, bouncing off a pad, pressing the numbered buttons and landing in the goal","how_eyebrow":"How to play","how_h2":"Three moves. That’s the whole game.","how_lede":"You’ll get it in ten seconds. Mastering 999 levels takes a little longer.","s1_t":"Drag back","s1_d":"Touch anywhere on the board and pull. The dotted line shows exactly where Ball will fly.","s2_t":"Let go","s2_d":"Ball launches, bouncing off walls and pads and slowing a little with every hit.","s3_t":"Open the goal, land it","s3_d":"From level 2 the goal starts locked. Press every button to open it, then roll in. Fewer launches earn more stars.","meet_aria":"Things you’ll meet on the board","meet_btn":"Buttons, some numbered","meet_pad":"Bounce pads","meet_spike":"Spikes that sting","meet_tp":"Teleporters","meet_stars":"Up to 3 stars a level","vid_how":"Gameplay: aim, launch, goal","sk_eyebrow":"The wardrobe","sk_h2":"<span class=\"w\">Loads of</span> <span class=\"w\">customizing!</span>","sk_lede":"Unlock 36 skins just by playing. Every one has its own trail, launch burst and little extras floating around Ball.","marquee_aria":"Some of the skins in Ball","legendary":"Legendary","trails_tag":"Same shot, three skins","vid_trails":"Glitch Mode, Eight Ball and Disco Ball each launched across the same level, each leaving a different trail","trails_h3":"Every skin flies its own way.","trails_p":"A burst of glitchy pixels, a streak of chalk dust, a shower of disco sparkles. Pick a skin and every launch, bounce and goal looks different.","secret_alt":"Ball winking next to two mystery skins with question marks","secret_t":"Psst… there’s more.","secret_p":"Not every skin shows up in the wardrobe. Some stay hidden until you find them, so keep playing and keep your eyes open.","modes_eyebrow":"Modes","modes_h2":"Two more ways to play.","modes_lede":"When the levels need a break, race the clock or play two boxes at once.","rush_t":"Rush","rush_p":"60 seconds on the clock. Every level you clear adds 10 seconds, every hit takes 3 away. How far can you get?","vid_rush":"Rush mode: the timer counts down while levels are cleared","mirror_t":"Mirror","mirror_p":"Two boxes, one shot. Aim in the bottom box and the top ball copies you, flipped left to right. Get both home.","vid_mirror":"Mirror mode: one aim moves two balls in two boxes","levels_h3":"Levels made just for you.","levels_p":"Every player’s levels are built from their own random seed, so nobody plays the same boxes you do. Replay any level from the Levels calendar to chase the stars you missed, and watch the difficulty climb from Easy to Super Hard.","more_eyebrow":"And there’s more","more_h2":"Little things that make it yours.","f1_t":"Achievements and records","f1_p":"From your first bounce to your best Rush run, everything gets counted.","f2_t":"Assisted mode","f2_p":"Stuck? Aim snaps to good shots and a ghost ball can show you one that works.","f3_t":"10 languages","f3_p":"English, Deutsch, Français, Italiano, 日本語, 한국어, Português, Русский, Español, Türkçe.","f4_t":"Wardrobe Warrior","f4_p":"An achievement for the ones who collect every single skin.","f5_t":"Light and dark","f5_p":"Pick the look you like, with sound effects and vibration on phones.","f6_t":"Secrets in the house","f6_p":"Ball’s house hides a couple of skins. Poke around.","inbox_eyebrow":"New","inbox_h3":"Inbox and Gifts.","inbox_p":"News about the game lands in your Inbox. Gifts from the Ball team, and rewards from promo codes, wait for you in Gifts. Got an idea? Settings → Send feedback goes straight to us.","app_eyebrow":"No download","app_h2":"Play it like an app.","app_lede":"Open Ball on your phone and add it to your home screen. It opens full screen, and your progress saves on your device automatically.","ios_t":"iPhone or iPad (Safari)","ios":"Tap <span class=\"kbd\">Share</span>, then <span class=\"kbd\">Add to Home Screen</span>.","and_t":"Android (Chrome)","and":"Tap <span class=\"kbd\">⋮</span>, then <span class=\"kbd\">Add to Home screen</span> or <span class=\"kbd\">Install app</span>.","pc_t":"Computer","pc":"It plays right in the browser. Click and drag to aim.","fin_h2":"Your first level is waiting.","fin_p":"Free, in your browser, on any phone or computer.","fin_btn":"Play Ball","foot_fb":"Ideas or feedback?","foot_made":"Made by Enzo Augusto"},"de":{"title":"Ball: zielen, abschießen, ins Ziel prallen lassen","desc":"Ball ist ein kostenloses Physik-Puzzle mit nur einem Fingertipp, direkt im Browser. Ziele, schieß und lass Ball durch 999 Level ins Ziel prallen, mit 36 Skins zum Sammeln.","nav_how":"Spielanleitung","nav_skins":"Skins","nav_modes":"Modi","nav_more":"Mehr","play":"Spielen","theme_aria":"Zwischen hellem und dunklem Modus wechseln","lang_aria":"Sprache","brand_aria":"Ball, nach oben","nav_aria":"Bereiche","free":"Kostenlos, direkt im Browser","h1":"Zielen. Abschießen. Ins Ziel <span class=\"b\">prallen</span> lassen.","lede":"Ball ist ein Physik-Puzzle mit nur einem Fingertipp. Zieh zurück, lass los und nutz die Wände für Bandenschüsse, um Ball mit möglichst wenigen Schüssen ins Ziel zu bringen.","cta_play":"Jetzt kostenlos spielen","cta_how":"So funktioniert’s","chip_levels":"<b>999</b> Level","chip_skins":"<b>36</b> Skins und Geheimnisse","chip_lang":"<b>10</b> Sprachen","chip_stars":"Sterne zum Sammeln","toast_small":"Level 11","toast":"Level geschafft!","vid_play":"Ein Level von Ball: zielen, von einem Pad abprallen, die nummerierten Knöpfe drücken und im Ziel landen","how_eyebrow":"Spielanleitung","how_h2":"Drei Schritte. Mehr braucht es nicht.","how_lede":"In zehn Sekunden hast du es verstanden. Alle 999 Level zu meistern dauert etwas länger.","s1_t":"Zurückziehen","s1_d":"Berühre eine beliebige Stelle und zieh. Die gepunktete Linie zeigt genau, wohin Ball fliegt.","s2_t":"Loslassen","s2_d":"Ball fliegt los, prallt von Wänden und Pads ab und wird bei jedem Treffer etwas langsamer.","s3_t":"Ziel öffnen und treffen","s3_d":"Ab Level 2 ist das Ziel verschlossen. Drück alle Knöpfe, um es zu öffnen, dann roll hinein. Weniger Schüsse bringen mehr Sterne.","meet_aria":"Was dir auf dem Spielfeld begegnet","meet_btn":"Knöpfe, manche nummeriert","meet_pad":"Sprungpads","meet_spike":"Stacheln, die piksen","meet_tp":"Teleporter","meet_stars":"Bis zu 3 Sterne pro Level","vid_how":"Spielablauf: zielen, abschießen, Ziel","sk_eyebrow":"Der Kleiderschrank","sk_h2":"<span class=\"w\">Jede Menge</span> <span class=\"w\">Styling!</span>","sk_lede":"Schalte 36 Skins einfach durchs Spielen frei. Jeder hat seine eigene Spur, seinen eigenen Abschuss-Effekt und kleine Extras, die um Ball schweben.","marquee_aria":"Einige Skins aus Ball","legendary":"Legendär","trails_tag":"Derselbe Schuss, drei Skins","vid_trails":"Glitch Mode, Eight Ball und Disco Ball werden durch dasselbe Level geschossen und ziehen jeweils eine andere Spur","trails_h3":"Jeder Skin fliegt auf seine Art.","trails_p":"Ein Schwall glitchender Pixel, ein Streifen Kreidestaub, ein Regen aus Disco-Funken. Wähl einen Skin, und jeder Schuss, jeder Abpraller und jedes Ziel sieht anders aus.","secret_alt":"Ball zwinkert neben zwei geheimnisvollen Skins mit Fragezeichen","secret_t":"Psst … da ist noch mehr.","secret_p":"Nicht jeder Skin taucht im Kleiderschrank auf. Manche bleiben versteckt, bis du sie findest. Also spiel weiter und halte die Augen offen.","modes_eyebrow":"Modi","modes_h2":"Zwei weitere Spielmodi.","modes_lede":"Wenn du eine Pause von den Leveln brauchst: Spiel gegen die Uhr oder in zwei Kästen gleichzeitig.","rush_t":"Rush","rush_p":"60 Sekunden auf der Uhr. Jedes geschaffte Level bringt 10 Sekunden, jeder Treffer kostet 3. Wie weit kommst du?","vid_rush":"Rush-Modus: Die Uhr läuft, während Level geschafft werden","mirror_t":"Spiegel","mirror_p":"Zwei Kästen, ein Schuss. Du zielst im unteren Kasten, und der obere Ball macht es dir spiegelverkehrt nach. Bring beide ins Ziel.","vid_mirror":"Spiegel-Modus: Ein Schuss bewegt zwei Bälle in zwei Kästen","levels_h3":"Level, nur für dich gemacht.","levels_p":"Die Level jedes Spielers entstehen aus seinem eigenen Zufallswert, also spielt niemand dieselben Kästen wie du. Spiel jedes Level im Level-Kalender noch mal, um verpasste Sterne zu holen, und sieh zu, wie es von Leicht bis Superschwer immer kniffliger wird.","more_eyebrow":"Und noch mehr","more_h2":"Kleinigkeiten, die es zu deinem Spiel machen.","f1_t":"Erfolge und Rekorde","f1_p":"Vom ersten Abpraller bis zu deinem besten Rush-Lauf wird alles gezählt.","f2_t":"Unterstützter Modus","f2_p":"Hängst du fest? Das Zielen rastet auf gute Schüsse ein, und ein Geisterball kann dir einen zeigen, der klappt.","f3_t":"10 Sprachen","f3_p":"English, Deutsch, Français, Italiano, 日本語, 한국어, Português, Русский, Español, Türkçe.","f4_t":"Kleiderschrank-Krieger","f4_p":"Ein Erfolg für alle, die wirklich jeden einzelnen Skin sammeln.","f5_t":"Hell und dunkel","f5_p":"Wähl den Look, der dir gefällt, mit Soundeffekten und Vibration auf dem Handy.","f6_t":"Geheimnisse im Haus","f6_p":"In Balls Haus verstecken sich ein paar Skins. Schau dich um.","inbox_eyebrow":"Neu","inbox_h3":"Posteingang und Geschenke.","inbox_p":"Neuigkeiten über das Spiel landen in deinem Posteingang. Geschenke vom Ball-Team und Belohnungen aus Promo-Codes warten unter „Geschenke“. Eine Idee? Einstellungen → Feedback senden geht direkt an uns.","app_eyebrow":"Kein Download","app_h2":"Spiel es wie eine App.","app_lede":"Öffne Ball auf dem Handy und leg es auf deinen Home-Bildschirm. Es öffnet sich im Vollbild, und dein Fortschritt wird automatisch auf deinem Gerät gespeichert.","ios_t":"iPhone oder iPad (Safari)","ios":"Tippe auf <span class=\"kbd\">Teilen</span>, dann auf <span class=\"kbd\">Zum Home-Bildschirm</span>.","and_t":"Android (Chrome)","and":"Tippe auf <span class=\"kbd\">⋮</span>, dann auf <span class=\"kbd\">Zum Startbildschirm hinzufügen</span> oder <span class=\"kbd\">App installieren</span>.","pc_t":"Computer","pc":"Es läuft direkt im Browser. Klicken und ziehen zum Zielen.","fin_h2":"Dein erstes Level wartet schon.","fin_p":"Kostenlos, im Browser, auf jedem Handy und Computer.","fin_btn":"Ball spielen","foot_fb":"Ideen oder Feedback?","foot_made":"Von Enzo Augusto"},"fr":{"title":"Ball : vise, tire, fais rebondir jusqu’au but","desc":"Ball est un puzzle de physique gratuit qui se joue d’un seul doigt, directement dans le navigateur. Vise, tire et fais rebondir Ball jusqu’au but sur 999 niveaux, avec 36 skins à collectionner.","nav_how":"Comment jouer","nav_skins":"Skins","nav_modes":"Modes","nav_more":"Plus","play":"Jouer","theme_aria":"Passer du mode clair au mode sombre","lang_aria":"Langue","brand_aria":"Ball, retour en haut","nav_aria":"Sections","free":"Gratuit, directement dans ton navigateur","h1":"Vise. Tire. Fais <span class=\"b\">rebondir</span> jusqu’au but.","lede":"Ball est un puzzle de physique qui se joue d’un seul doigt. Tire en arrière, lâche, et utilise les murs pour envoyer Ball dans le but avec le moins de tirs possible.","cta_play":"Jouer gratuitement","cta_how":"Voir comment ça marche","chip_levels":"<b>999</b> niveaux","chip_skins":"<b>36</b> skins, et des secrets","chip_lang":"<b>10</b> langues","chip_stars":"Des étoiles à gagner","toast_small":"Niveau 11","toast":"Niveau réussi !","vid_play":"Un niveau de Ball : viser, rebondir sur un tremplin, appuyer sur les boutons numérotés et atterrir dans le but","how_eyebrow":"Comment jouer","how_h2":"Trois gestes. C’est tout le jeu.","how_lede":"Tu comprendras en dix secondes. Maîtriser 999 niveaux prend un peu plus de temps.","s1_t":"Tire en arrière","s1_d":"Touche n’importe où sur le plateau et tire. La ligne pointillée montre exactement où Ball va voler.","s2_t":"Lâche","s2_d":"Ball part et rebondit sur les murs et les tremplins, en ralentissant un peu à chaque choc.","s3_t":"Ouvre le but, marque","s3_d":"Dès le niveau 2, le but est verrouillé. Appuie sur tous les boutons pour l’ouvrir, puis roule dedans. Moins de tirs, plus d’étoiles.","meet_aria":"Ce que tu vas croiser sur le plateau","meet_btn":"Des boutons, parfois numérotés","meet_pad":"Des tremplins","meet_spike":"Des piques qui piquent","meet_tp":"Des téléporteurs","meet_stars":"Jusqu’à 3 étoiles par niveau","vid_how":"Partie : viser, tirer, marquer","sk_eyebrow":"La garde-robe","sk_h2":"<span class=\"w\">Plein de</span> <span class=\"w\">personnalisation !</span>","sk_lede":"Débloque 36 skins rien qu’en jouant. Chacun a sa propre traînée, son effet de tir et de petits extras qui flottent autour de Ball.","marquee_aria":"Quelques skins de Ball","legendary":"Légendaire","trails_tag":"Même tir, trois skins","vid_trails":"Glitch Mode, Eight Ball et Disco Ball lancés dans le même niveau, chacun avec une traînée différente","trails_h3":"Chaque skin vole à sa façon.","trails_p":"Une salve de pixels qui buggent, une traînée de craie, une pluie d’étincelles disco. Choisis un skin, et chaque tir, rebond et but est différent.","secret_alt":"Ball fait un clin d’œil à côté de deux skins mystère avec des points d’interrogation","secret_t":"Psst… il y en a d’autres.","secret_p":"Tous les skins ne s’affichent pas dans la garde-robe. Certains restent cachés jusqu’à ce que tu les trouves. Alors continue à jouer et garde l’œil ouvert.","modes_eyebrow":"Modes","modes_h2":"Deux autres façons de jouer.","modes_lede":"Quand tu veux faire une pause dans les niveaux, cours contre la montre ou joue dans deux boîtes à la fois.","rush_t":"Rush","rush_p":"60 secondes au chrono. Chaque niveau réussi ajoute 10 secondes, chaque coup en retire 3. Jusqu’où iras-tu ?","vid_rush":"Mode Rush : le chrono défile pendant que les niveaux s’enchaînent","mirror_t":"Miroir","mirror_p":"Deux boîtes, un seul tir. Vise dans la boîte du bas, et la balle du haut te copie, inversée de gauche à droite. Amène les deux au but.","vid_mirror":"Mode Miroir : un seul tir déplace deux balles dans deux boîtes","levels_h3":"Des niveaux rien que pour toi.","levels_p":"Les niveaux de chaque joueur sont créés à partir de sa propre graine aléatoire : personne ne joue les mêmes boîtes que toi. Rejoue n’importe quel niveau depuis le calendrier des niveaux pour récupérer les étoiles manquées, et vois la difficulté grimper de Facile à Très difficile.","more_eyebrow":"Et ce n’est pas tout","more_h2":"Des petits détails qui le rendent unique.","f1_t":"Succès et records","f1_p":"De ton premier rebond à ta meilleure partie de Rush, tout est compté.","f2_t":"Mode assisté","f2_p":"Bloqué ? La visée se cale sur les bons tirs et une balle fantôme peut t’en montrer un qui marche.","f3_t":"10 langues","f3_p":"English, Deutsch, Français, Italiano, 日本語, 한국어, Português, Русский, Español, Türkçe.","f4_t":"As de la garde-robe","f4_p":"Un succès pour ceux qui collectionnent absolument tous les skins.","f5_t":"Clair et sombre","f5_p":"Choisis le look qui te plaît, avec effets sonores et vibrations sur téléphone.","f6_t":"Des secrets dans la maison","f6_p":"La maison de Ball cache quelques skins. Fouille un peu.","inbox_eyebrow":"Nouveau","inbox_h3":"Boîte de réception et Cadeaux.","inbox_p":"Les nouvelles du jeu arrivent dans ta boîte de réception. Les cadeaux de l’équipe de Ball et les récompenses des codes promo t’attendent dans Cadeaux. Une idée ? Réglages → Envoyer un avis arrive directement chez nous.","app_eyebrow":"Aucun téléchargement","app_h2":"Joue comme à une appli.","app_lede":"Ouvre Ball sur ton téléphone et ajoute-le à ton écran d’accueil. Il s’ouvre en plein écran, et ta progression est enregistrée automatiquement sur ton appareil.","ios_t":"iPhone ou iPad (Safari)","ios":"Touche <span class=\"kbd\">Partager</span>, puis <span class=\"kbd\">Sur l’écran d’accueil</span>.","and_t":"Android (Chrome)","and":"Touche <span class=\"kbd\">⋮</span>, puis <span class=\"kbd\">Ajouter à l’écran d’accueil</span> ou <span class=\"kbd\">Installer l’application</span>.","pc_t":"Ordinateur","pc":"Il se joue directement dans le navigateur. Clique et fais glisser pour viser.","fin_h2":"Ton premier niveau t’attend.","fin_p":"Gratuit, dans ton navigateur, sur n’importe quel téléphone ou ordinateur.","fin_btn":"Jouer à Ball","foot_fb":"Des idées ou un avis ?","foot_made":"Créé par Enzo Augusto"},"it":{"title":"Ball: mira, lancia, fallo rimbalzare nel traguardo","desc":"Ball è un puzzle di fisica gratuito che si gioca con un tocco, direttamente nel browser. Mira, lancia e fai rimbalzare Ball nel traguardo in 999 livelli, con 36 skin da collezionare.","nav_how":"Come si gioca","nav_skins":"Skin","nav_modes":"Modalità","nav_more":"Altro","play":"Gioca","theme_aria":"Passa dalla modalità chiara a quella scura","lang_aria":"Lingua","brand_aria":"Ball, torna su","nav_aria":"Sezioni","free":"Gratis, direttamente nel browser","h1":"Mira. Lancia. Fallo <span class=\"b\">rimbalzare</span> nel traguardo.","lede":"Ball è un puzzle di fisica che si gioca con un tocco. Tira indietro, lascia andare e sfrutta le sponde per mandare Ball nel traguardo con meno lanci possibile.","cta_play":"Gioca gratis ora","cta_how":"Scopri come funziona","chip_levels":"<b>999</b> livelli","chip_skins":"<b>36</b> skin, più qualche segreto","chip_lang":"<b>10</b> lingue","chip_stars":"Stelle da conquistare","toast_small":"Livello 11","toast":"Livello completato!","vid_play":"Un livello di Ball: mirare, rimbalzare su un trampolino, premere i pulsanti numerati e arrivare al traguardo","how_eyebrow":"Come si gioca","how_h2":"Tre mosse. Tutto il gioco è qui.","how_lede":"Lo capisci in dieci secondi. Padroneggiare 999 livelli richiede un po’ di più.","s1_t":"Tira indietro","s1_d":"Tocca un punto qualsiasi del campo e tira. La linea tratteggiata mostra esattamente dove volerà Ball.","s2_t":"Lascia andare","s2_d":"Ball parte e rimbalza su muri e trampolini, rallentando un po’ a ogni colpo.","s3_t":"Apri il traguardo, centralo","s3_d":"Dal livello 2 il traguardo è chiuso. Premi tutti i pulsanti per aprirlo, poi entra. Meno lanci, più stelle.","meet_aria":"Cosa troverai nel campo","meet_btn":"Pulsanti, alcuni numerati","meet_pad":"Trampolini","meet_spike":"Punte che pungono","meet_tp":"Teletrasporti","meet_stars":"Fino a 3 stelle per livello","vid_how":"Partita: mira, lancio, traguardo","sk_eyebrow":"Il guardaroba","sk_h2":"<span class=\"w\">Tantissima</span> <span class=\"w\">personalizzazione!</span>","sk_lede":"Sblocca 36 skin semplicemente giocando. Ognuna ha la sua scia, il suo effetto di lancio e piccoli extra che fluttuano intorno a Ball.","marquee_aria":"Alcune skin di Ball","legendary":"Leggendaria","trails_tag":"Stesso tiro, tre skin","vid_trails":"Glitch Mode, Eight Ball e Disco Ball lanciate nello stesso livello, ognuna con una scia diversa","trails_h3":"Ogni skin vola a modo suo.","trails_p":"Una raffica di pixel impazziti, una scia di gesso, una pioggia di scintille disco. Scegli una skin e ogni lancio, rimbalzo e traguardo sarà diverso.","secret_alt":"Ball fa l’occhiolino accanto a due skin misteriose con il punto interrogativo","secret_t":"Psst… c’è dell’altro.","secret_p":"Non tutte le skin compaiono nel guardaroba. Alcune restano nascoste finché non le trovi. Quindi continua a giocare e tieni gli occhi aperti.","modes_eyebrow":"Modalità","modes_h2":"Altri due modi per giocare.","modes_lede":"Quando vuoi una pausa dai livelli, corri contro il tempo o gioca in due scatole insieme.","rush_t":"Rush","rush_p":"60 secondi sul cronometro. Ogni livello superato aggiunge 10 secondi, ogni colpo ne toglie 3. Fin dove arrivi?","vid_rush":"Modalità Rush: il tempo scorre mentre si superano i livelli","mirror_t":"Specchio","mirror_p":"Due scatole, un solo tiro. Mira nella scatola in basso e la palla in alto ti copia, specchiata da sinistra a destra. Portale entrambe al traguardo.","vid_mirror":"Modalità Specchio: un solo tiro muove due palle in due scatole","levels_h3":"Livelli fatti apposta per te.","levels_p":"I livelli di ogni giocatore nascono dal suo seme casuale, quindi nessuno gioca le tue stesse scatole. Rigioca qualsiasi livello dal calendario dei livelli per prendere le stelle che ti mancano, e guarda la difficoltà salire da Facile a Super difficile.","more_eyebrow":"E non è finita","more_h2":"Piccole cose che lo rendono tuo.","f1_t":"Obiettivi e record","f1_p":"Dal primo rimbalzo alla tua migliore partita Rush, tutto viene contato.","f2_t":"Modalità assistita","f2_p":"Bloccato? La mira si aggancia ai tiri buoni e una palla fantasma può mostrartene uno che funziona.","f3_t":"10 lingue","f3_p":"English, Deutsch, Français, Italiano, 日本語, 한국어, Português, Русский, Español, Türkçe.","f4_t":"Guerriero del guardaroba","f4_p":"Un obiettivo per chi colleziona proprio tutte le skin.","f5_t":"Chiaro e scuro","f5_p":"Scegli lo stile che preferisci, con effetti sonori e vibrazione sul telefono.","f6_t":"Segreti in casa","f6_p":"La casa di Ball nasconde un paio di skin. Curiosa in giro.","inbox_eyebrow":"Novità","inbox_h3":"Posta e Regali.","inbox_p":"Le novità sul gioco arrivano nella tua Posta. I regali del team di Ball e i premi dei codici promo ti aspettano in Regali. Hai un’idea? Impostazioni → Invia un feedback arriva direttamente a noi.","app_eyebrow":"Nessun download","app_h2":"Giocalo come un’app.","app_lede":"Apri Ball sul telefono e aggiungilo alla schermata Home. Si apre a schermo intero e i tuoi progressi si salvano automaticamente sul dispositivo.","ios_t":"iPhone o iPad (Safari)","ios":"Tocca <span class=\"kbd\">Condividi</span>, poi <span class=\"kbd\">Aggiungi alla schermata Home</span>.","and_t":"Android (Chrome)","and":"Tocca <span class=\"kbd\">⋮</span>, poi <span class=\"kbd\">Aggiungi a schermata Home</span> o <span class=\"kbd\">Installa app</span>.","pc_t":"Computer","pc":"Si gioca direttamente nel browser. Clicca e trascina per mirare.","fin_h2":"Il tuo primo livello ti aspetta.","fin_p":"Gratis, nel browser, su qualsiasi telefono o computer.","fin_btn":"Gioca a Ball","foot_fb":"Idee o feedback?","foot_made":"Creato da Enzo Augusto"},"ja":{"title":"ボール：ねらって、うって、ゴールにバウンド","desc":"ボールはブラウザで遊べる無料のワンタップ物理パズル。ねらって、うって、999レベルでボールをゴールにバウンドさせよう。集められるスキンは36種類。","nav_how":"遊び方","nav_skins":"スキン","nav_modes":"モード","nav_more":"その他","play":"プレイ","theme_aria":"ライトモードとダークモードを切り替える","lang_aria":"言語","brand_aria":"ボール、ページの先頭へ","nav_aria":"セクション","free":"無料、ブラウザですぐ遊べる","h1":"ねらって。うって。ゴールに<span class=\"b\">バウンド</span>！","lede":"ボールはワンタップで遊ぶ物理パズル。引っぱって、はなして、壁を使ったバンクショットで、できるだけ少ない発射回数でボールをゴールに入れよう。","cta_play":"今すぐ無料でプレイ","cta_how":"遊び方を見る","chip_levels":"<b>999</b>レベル","chip_skins":"スキン<b>36</b>種類＋ひみつ","chip_lang":"<b>10</b>言語","chip_stars":"星を集めよう","toast_small":"レベル11","toast":"レベルクリア！","vid_play":"ボールのプレイ動画：ねらいをつけ、ジャンプ台でバウンドし、番号つきボタンを押してゴール","how_eyebrow":"遊び方","how_h2":"操作は3つだけ。","how_lede":"10秒でわかるよ。999レベルを極めるには、もう少しかかるけどね。","s1_t":"引っぱる","s1_d":"盤面のどこでもタッチして引っぱろう。点線がボールの飛ぶ先をぴったり教えてくれるよ。","s2_t":"はなす","s2_d":"ボールが飛び出して、壁やジャンプ台でバウンド。当たるたびに少しずつ遅くなるよ。","s3_t":"ゴールを開けて入れる","s3_d":"レベル2からはゴールがロックされているよ。ボタンを全部押して開けたら、転がりこもう。発射が少ないほど星が増えるよ。","meet_aria":"盤面に出てくるもの","meet_btn":"ボタン（番号つきも）","meet_pad":"ジャンプ台","meet_spike":"痛いトゲ","meet_tp":"ワープ","meet_stars":"1レベル最大3つの星","vid_how":"プレイ：ねらう、うつ、ゴール","sk_eyebrow":"クローゼット","sk_h2":"<span class=\"w\">着せかえが</span> <span class=\"w\">いっぱい！</span>","sk_lede":"遊ぶだけで36種類のスキンが解放されるよ。どのスキンにも専用の軌跡、発射エフェクト、ボールのまわりをただよう小物があるよ。","marquee_aria":"ボールのスキンの一部","legendary":"レジェンド","trails_tag":"同じショット、3つのスキン","vid_trails":"Glitch Mode、Eight Ball、Disco Ballを同じレベルで発射。それぞれちがう軌跡を残す","trails_h3":"スキンごとに飛び方がちがう。","trails_p":"バグったピクセルがはじけたり、チョークの粉が流れたり、ディスコのきらめきが降ったり。スキンを選べば、発射もバウンドもゴールも見た目がガラッと変わるよ。","secret_alt":"「？」マークのついたなぞのスキン2つのとなりでウインクするボール","secret_t":"ないしょだよ…まだあるんだ。","secret_p":"クローゼットにすべてのスキンが表示されているわけじゃないよ。見つけるまでかくれているスキンも。プレイを続けて、よーく探してみてね。","modes_eyebrow":"モード","modes_h2":"ほかに2つの遊び方。","modes_lede":"レベルにひと休みしたいときは、時間とたたかったり、2つの箱を同時に遊んだり。","rush_t":"ラッシュ","rush_p":"持ち時間は60秒。レベルをクリアするたびに10秒プラス、当たるたびに3秒マイナス。どこまで行けるかな？","vid_rush":"ラッシュモード：レベルをクリアしていくあいだにタイマーが減っていく","mirror_t":"ミラー","mirror_p":"箱は2つ、ショットは1回。下の箱でねらうと、上のボールが左右反転でマネするよ。両方をゴールに入れよう。","vid_mirror":"ミラーモード：1回のショットで2つの箱のボールが動く","levels_h3":"あなただけのレベル。","levels_p":"レベルはプレイヤーごとのランダムなシードから作られるから、あなたと同じ箱を遊ぶ人はいないよ。レベルカレンダーからどのレベルでも遊びなおして取りのがした星を集めよう。むずかしさは「かんたん」から「超むずかしい」まで上がっていくよ。","more_eyebrow":"まだまだあるよ","more_h2":"あなたらしく遊べる小さな工夫。","f1_t":"実績と記録","f1_p":"最初のバウンドからラッシュの最高記録まで、ぜんぶ記録されるよ。","f2_t":"アシストモード","f2_p":"つまずいたら、ねらいが良いショットにピタッと合って、ゴーストボールがうまくいくショットを見せてくれるよ。","f3_t":"10言語","f3_p":"English, Deutsch, Français, Italiano, 日本語, 한국어, Português, Русский, Español, Türkçe。","f4_t":"クローゼットの達人","f4_p":"スキンをひとつ残らず集めた人のための実績。","f5_t":"ライトとダーク","f5_p":"好きな見た目を選ぼう。スマホでは効果音とバイブレーションも。","f6_t":"家にひそむひみつ","f6_p":"ボールの家にはスキンがいくつかかくれているよ。いろいろさわってみて。","inbox_eyebrow":"NEW","inbox_h3":"お知らせとプレゼント。","inbox_p":"ゲームのニュースは「お知らせ」に届くよ。ボールのチームからのプレゼントやプロモコードの特典は「プレゼント」で待っているよ。アイデアがあれば、設定 → フィードバックを送る から直接届けてね。","app_eyebrow":"ダウンロード不要","app_h2":"アプリみたいに遊ぼう。","app_lede":"スマホでボールを開いてホーム画面に追加しよう。全画面で開いて、進行状況は自動で端末に保存されるよ。","ios_t":"iPhone・iPad（Safari）","ios":"<span class=\"kbd\">共有</span>をタップして、<span class=\"kbd\">ホーム画面に追加</span>を選ぼう。","and_t":"Android（Chrome）","and":"<span class=\"kbd\">⋮</span>をタップして、<span class=\"kbd\">ホーム画面に追加</span>または<span class=\"kbd\">アプリをインストール</span>を選ぼう。","pc_t":"パソコン","pc":"ブラウザでそのまま遊べるよ。クリックしてドラッグでねらおう。","fin_h2":"最初のレベルが待ってるよ。","fin_p":"無料。ブラウザで、どのスマホやパソコンでも。","fin_btn":"ボールで遊ぶ","foot_fb":"アイデアや感想は？","foot_made":"制作：Enzo Augusto"},"ko":{"title":"공: 조준하고, 발사하고, 골로 튕겨 넣기","desc":"공은 브라우저에서 즐기는 무료 원탭 물리 퍼즐이에요. 조준하고 발사해서 999개 레벨에서 공을 골로 튕겨 넣고, 스킨 36종을 모아 보세요.","nav_how":"플레이 방법","nav_skins":"스킨","nav_modes":"모드","nav_more":"더 보기","play":"플레이","theme_aria":"라이트 모드와 다크 모드 전환","lang_aria":"언어","brand_aria":"공, 맨 위로","nav_aria":"섹션","free":"무료, 브라우저에서 바로","h1":"조준. 발사. 골로 <span class=\"b\">튕겨</span> 넣기.","lede":"공은 한 번의 탭으로 즐기는 물리 퍼즐이에요. 당겼다 놓고, 벽을 이용한 뱅크 샷으로 최대한 적은 발사로 공을 골에 넣어 보세요.","cta_play":"지금 무료로 플레이","cta_how":"플레이 방법 보기","chip_levels":"<b>999</b>개 레벨","chip_skins":"스킨 <b>36</b>종 + 비밀","chip_lang":"<b>10</b>개 언어","chip_stars":"별을 모아 보세요","toast_small":"레벨 11","toast":"레벨 클리어!","vid_play":"공 플레이 영상: 조준하고, 점프대에서 튕기고, 번호 버튼을 누르고, 골에 들어가기","how_eyebrow":"플레이 방법","how_h2":"동작은 세 가지. 그게 전부예요.","how_lede":"10초면 알 수 있어요. 999개 레벨을 마스터하려면 조금 더 걸리지만요.","s1_t":"뒤로 당기기","s1_d":"판 어디든 터치하고 당기세요. 점선이 공이 날아갈 곳을 정확히 보여 줘요.","s2_t":"놓기","s2_d":"공이 날아가 벽과 점프대에 튕기며, 부딪힐 때마다 조금씩 느려져요.","s3_t":"골을 열고 넣기","s3_d":"레벨 2부터는 골이 잠겨 있어요. 버튼을 모두 눌러 연 다음 굴러 들어가세요. 발사가 적을수록 별을 더 받아요.","meet_aria":"판에서 만나게 될 것들","meet_btn":"버튼, 번호가 있는 것도","meet_pad":"점프대","meet_spike":"따끔한 가시","meet_tp":"순간이동 장치","meet_stars":"레벨마다 별 최대 3개","vid_how":"플레이: 조준, 발사, 골","sk_eyebrow":"옷장","sk_h2":"<span class=\"w\">꾸밀 거리가</span> <span class=\"w\">가득!</span>","sk_lede":"플레이만 하면 스킨 36종이 열려요. 스킨마다 고유한 궤적, 발사 효과, 공 주위를 떠다니는 작은 장식이 있어요.","marquee_aria":"공의 스킨 일부","legendary":"전설","trails_tag":"같은 샷, 스킨 세 개","vid_trails":"Glitch Mode, Eight Ball, Disco Ball을 같은 레벨에서 발사하면 각자 다른 궤적을 남겨요","trails_h3":"스킨마다 날아가는 모습이 달라요.","trails_p":"지지직거리는 픽셀, 분필 가루 줄기, 반짝이는 디스코 불꽃. 스킨을 고르면 발사, 튕김, 골인이 모두 다르게 보여요.","secret_alt":"물음표가 그려진 수수께끼 스킨 두 개 옆에서 윙크하는 공","secret_t":"쉿… 더 있어요.","secret_p":"모든 스킨이 옷장에 보이는 건 아니에요. 어떤 스킨은 찾아낼 때까지 숨어 있어요. 계속 플레이하면서 눈을 크게 뜨고 찾아보세요.","modes_eyebrow":"모드","modes_h2":"또 다른 두 가지 플레이.","modes_lede":"레벨에서 잠시 쉬고 싶을 땐 시간과 싸우거나 두 개의 상자를 동시에 플레이해 보세요.","rush_t":"러시","rush_p":"시계에 60초. 레벨을 클리어할 때마다 10초가 늘고, 맞을 때마다 3초가 줄어요. 어디까지 갈 수 있을까요?","vid_rush":"러시 모드: 레벨을 클리어하는 동안 타이머가 줄어들어요","mirror_t":"미러","mirror_p":"상자 두 개, 샷은 한 번. 아래 상자에서 조준하면 위의 공이 좌우를 뒤집어 따라 해요. 둘 다 골에 넣으세요.","vid_mirror":"미러 모드: 한 번의 조준으로 두 상자의 공 두 개가 움직여요","levels_h3":"나만을 위한 레벨.","levels_p":"플레이어마다 각자의 랜덤 시드로 레벨이 만들어져서, 아무도 나와 같은 상자를 플레이하지 않아요. 레벨 달력에서 어떤 레벨이든 다시 플레이해 놓친 별을 모으고, 쉬움부터 매우 어려움까지 올라가는 난이도를 즐겨 보세요.","more_eyebrow":"그리고 더 있어요","more_h2":"나만의 게임으로 만들어 주는 작은 것들.","f1_t":"업적과 기록","f1_p":"첫 번째 튕김부터 러시 최고 기록까지 모든 게 기록돼요.","f2_t":"어시스트 모드","f2_p":"막혔나요? 조준이 좋은 샷에 딱 맞춰지고, 고스트 공이 통하는 샷을 보여 줄 수 있어요.","f3_t":"10개 언어","f3_p":"English, Deutsch, Français, Italiano, 日本語, 한국어, Português, Русский, Español, Türkçe.","f4_t":"옷장 전사","f4_p":"스킨을 하나도 빠짐없이 모은 사람을 위한 업적.","f5_t":"라이트와 다크","f5_p":"마음에 드는 모습을 고르세요. 휴대폰에서는 효과음과 진동도 있어요.","f6_t":"집 안의 비밀","f6_p":"공의 집에는 스킨 몇 개가 숨어 있어요. 이리저리 살펴보세요.","inbox_eyebrow":"NEW","inbox_h3":"받은 편지함과 선물.","inbox_p":"게임 소식은 받은 편지함으로 와요. 공 팀이 보내는 선물과 프로모션 코드 보상은 선물에서 기다리고 있어요. 아이디어가 있나요? 설정 → 피드백 보내기로 바로 보내 주세요.","app_eyebrow":"다운로드 없이","app_h2":"앱처럼 플레이하세요.","app_lede":"휴대폰에서 공을 열고 홈 화면에 추가하세요. 전체 화면으로 열리고, 진행 상황은 기기에 자동으로 저장돼요.","ios_t":"iPhone 또는 iPad (Safari)","ios":"<span class=\"kbd\">공유</span>를 탭한 다음 <span class=\"kbd\">홈 화면에 추가</span>를 누르세요.","and_t":"Android (Chrome)","and":"<span class=\"kbd\">⋮</span>을 탭한 다음 <span class=\"kbd\">홈 화면에 추가</span> 또는 <span class=\"kbd\">앱 설치</span>를 누르세요.","pc_t":"컴퓨터","pc":"브라우저에서 바로 플레이할 수 있어요. 클릭하고 드래그해서 조준하세요.","fin_h2":"첫 번째 레벨이 기다리고 있어요.","fin_p":"무료로, 브라우저에서, 어떤 휴대폰이나 컴퓨터에서든.","fin_btn":"공 플레이하기","foot_fb":"아이디어나 피드백이 있나요?","foot_made":"만든 사람: Enzo Augusto"},"pt-BR":{"title":"Ball: mire, lance e faça quicar até o gol","desc":"Ball é um quebra-cabeça de física grátis, com um toque só, para jogar no navegador. Mire, lance e faça a Ball quicar até o gol em 999 níveis, com 36 skins para colecionar.","nav_how":"Como jogar","nav_skins":"Skins","nav_modes":"Modos","nav_more":"Mais","play":"Jogar","theme_aria":"Alternar entre modo claro e escuro","lang_aria":"Idioma","brand_aria":"Ball, voltar ao topo","nav_aria":"Seções","free":"Grátis, direto no navegador","h1":"Mire. Lance. Faça <span class=\"b\">quicar</span> até o gol.","lede":"Ball é um quebra-cabeça de física com um toque só. Puxe, solte e use as paredes para tabelar e levar a Ball até o gol com o mínimo de lançamentos.","cta_play":"Jogar grátis agora","cta_how":"Ver como funciona","chip_levels":"<b>999</b> níveis","chip_skins":"<b>36</b> skins, e segredos","chip_lang":"<b>10</b> idiomas","chip_stars":"Estrelas para conquistar","toast_small":"Nível 11","toast":"Nível concluído!","vid_play":"Um nível de Ball sendo jogado: mirando, quicando num trampolim, apertando os botões numerados e chegando ao gol","how_eyebrow":"Como jogar","how_h2":"Três movimentos. O jogo é só isso.","how_lede":"Você entende em dez segundos. Dominar 999 níveis leva um pouco mais.","s1_t":"Puxe","s1_d":"Toque em qualquer lugar do tabuleiro e puxe. A linha pontilhada mostra exatamente para onde a Ball vai voar.","s2_t":"Solte","s2_d":"A Ball sai voando, quicando nas paredes e trampolins e ficando um pouco mais lenta a cada batida.","s3_t":"Abra o gol e acerte","s3_d":"A partir do nível 2 o gol começa trancado. Aperte todos os botões para abri-lo e depois entre. Menos lançamentos rendem mais estrelas.","meet_aria":"O que você vai encontrar no tabuleiro","meet_btn":"Botões, alguns numerados","meet_pad":"Trampolins","meet_spike":"Espinhos que machucam","meet_tp":"Teletransportes","meet_stars":"Até 3 estrelas por nível","vid_how":"Partida: mirar, lançar, gol","sk_eyebrow":"O guarda-roupa","sk_h2":"<span class=\"w\">Muita</span> <span class=\"w\">personalização!</span>","sk_lede":"Desbloqueie 36 skins só jogando. Cada uma tem seu próprio rastro, efeito de lançamento e enfeites flutuando em volta da Ball.","marquee_aria":"Algumas skins de Ball","legendary":"Lendária","trails_tag":"Mesmo lance, três skins","vid_trails":"Glitch Mode, Eight Ball e Disco Ball lançadas no mesmo nível, cada uma deixando um rastro diferente","trails_h3":"Cada skin voa do seu jeito.","trails_p":"Uma explosão de pixels bugados, um rastro de pó de giz, uma chuva de brilhos de discoteca. Escolha uma skin e cada lançamento, quique e gol fica diferente.","secret_alt":"A Ball piscando ao lado de duas skins misteriosas com pontos de interrogação","secret_t":"Psiu… tem mais.","secret_p":"Nem toda skin aparece no guarda-roupa. Algumas ficam escondidas até você encontrá-las. Então continue jogando e fique de olho.","modes_eyebrow":"Modos","modes_h2":"Mais dois jeitos de jogar.","modes_lede":"Quando quiser dar um tempo dos níveis, corra contra o relógio ou jogue em duas caixas ao mesmo tempo.","rush_t":"Rush","rush_p":"60 segundos no relógio. Cada nível concluído soma 10 segundos, cada pancada tira 3. Até onde você consegue chegar?","vid_rush":"Modo Rush: o tempo corre enquanto os níveis são concluídos","mirror_t":"Espelho","mirror_p":"Duas caixas, um lance. Mire na caixa de baixo e a bola de cima te copia, espelhada da esquerda para a direita. Leve as duas ao gol.","vid_mirror":"Modo Espelho: uma mira move duas bolas em duas caixas","levels_h3":"Níveis feitos só para você.","levels_p":"Os níveis de cada jogador são criados a partir da sua própria semente aleatória, então ninguém joga as mesmas caixas que você. Jogue de novo qualquer nível pelo calendário de níveis para buscar as estrelas que faltaram, e veja a dificuldade subir de Fácil a Superdifícil.","more_eyebrow":"E tem mais","more_h2":"Detalhes que deixam o jogo com a sua cara.","f1_t":"Conquistas e recordes","f1_p":"Do seu primeiro quique à sua melhor partida de Rush, tudo é contado.","f2_t":"Modo assistido","f2_p":"Travou? A mira se ajusta aos bons lances e uma bola fantasma pode mostrar um que funciona.","f3_t":"10 idiomas","f3_p":"English, Deutsch, Français, Italiano, 日本語, 한국어, Português, Русский, Español, Türkçe.","f4_t":"Guerreiro do Guarda-Roupa","f4_p":"Uma conquista para quem coleciona todas as skins, sem faltar nenhuma.","f5_t":"Claro e escuro","f5_p":"Escolha o visual que preferir, com efeitos sonoros e vibração no celular.","f6_t":"Segredos na casa","f6_p":"A casa da Ball esconde algumas skins. Dê uma fuçada.","inbox_eyebrow":"Novidade","inbox_h3":"Caixa de entrada e Presentes.","inbox_p":"As novidades do jogo chegam na sua Caixa de entrada. Presentes da equipe do Ball e prêmios de códigos promocionais esperam por você em Presentes. Teve uma ideia? Ajustes → Enviar feedback chega direto para nós.","app_eyebrow":"Sem download","app_h2":"Jogue como um app.","app_lede":"Abra o Ball no celular e adicione à tela de início. Ele abre em tela cheia, e seu progresso é salvo automaticamente no aparelho.","ios_t":"iPhone ou iPad (Safari)","ios":"Toque em <span class=\"kbd\">Compartilhar</span> e depois em <span class=\"kbd\">Adicionar à Tela de Início</span>.","and_t":"Android (Chrome)","and":"Toque em <span class=\"kbd\">⋮</span> e depois em <span class=\"kbd\">Adicionar à tela inicial</span> ou <span class=\"kbd\">Instalar app</span>.","pc_t":"Computador","pc":"Dá para jogar direto no navegador. Clique e arraste para mirar.","fin_h2":"Seu primeiro nível está esperando.","fin_p":"Grátis, no navegador, em qualquer celular ou computador.","fin_btn":"Jogar Ball","foot_fb":"Ideias ou feedback?","foot_made":"Feito por Enzo Augusto"},"ru":{"title":"Ball: целься, запускай, отправь Мяч в цель","desc":"Ball — бесплатная физическая головоломка в одно касание прямо в браузере. Целься, запускай и отправляй Мяч в цель на 999 уровнях, собирая 36 скинов.","nav_how":"Как играть","nav_skins":"Скины","nav_modes":"Режимы","nav_more":"Ещё","play":"Играть","theme_aria":"Переключить светлую и тёмную тему","lang_aria":"Язык","brand_aria":"Ball, наверх","nav_aria":"Разделы","free":"Бесплатно, прямо в браузере","h1":"Целься. Запускай. <span class=\"b\">Отбивай</span> прямо в цель.","lede":"Ball — физическая головоломка в одно касание. Оттяни, отпусти и отбивай Мяч от стен, чтобы попасть в цель за как можно меньше бросков.","cta_play":"Играть бесплатно","cta_how":"Как это работает","chip_levels":"<b>999</b> уровней","chip_skins":"<b>36</b> скинов и секреты","chip_lang":"<b>10</b> языков","chip_stars":"Звёзды за мастерство","toast_small":"Уровень 11","toast":"Уровень пройден!","vid_play":"Прохождение уровня Ball: прицеливание, отскок от батута, нажатие пронумерованных кнопок и попадание в цель","how_eyebrow":"Как играть","how_h2":"Три движения. Вот и вся игра.","how_lede":"Разберёшься за десять секунд. Освоить 999 уровней — чуть дольше.","s1_t":"Оттяни","s1_d":"Коснись любого места на поле и потяни. Пунктир точно покажет, куда полетит Мяч.","s2_t":"Отпусти","s2_d":"Мяч летит, отскакивает от стен и батутов и с каждым ударом немного замедляется.","s3_t":"Открой цель и попади","s3_d":"Со 2-го уровня цель закрыта. Нажми все кнопки, чтобы открыть её, и закатывайся внутрь. Чем меньше бросков, тем больше звёзд.","meet_aria":"Что встретится на поле","meet_btn":"Кнопки, иногда с номерами","meet_pad":"Батуты","meet_spike":"Колючие шипы","meet_tp":"Телепорты","meet_stars":"До 3 звёзд за уровень","vid_how":"Игра: прицел, запуск, цель","sk_eyebrow":"Гардероб","sk_h2":"<span class=\"w\">Куча</span> <span class=\"w\">нарядов!</span>","sk_lede":"Открывай 36 скинов просто играя. У каждого свой след, свой эффект запуска и маленькие украшения, парящие вокруг Мяча.","marquee_aria":"Некоторые скины Ball","legendary":"Легендарный","trails_tag":"Один бросок, три скина","vid_trails":"Glitch Mode, Eight Ball и Disco Ball запущены на одном уровне, и каждый оставляет свой след","trails_h3":"Каждый скин летает по-своему.","trails_p":"Вспышка глючных пикселей, полоса меловой пыли, дождь диско-искр. Выбери скин, и каждый запуск, отскок и попадание будут выглядеть иначе.","secret_alt":"Мяч подмигивает рядом с двумя загадочными скинами со знаками вопроса","secret_t":"Тсс… это ещё не всё.","secret_p":"Не все скины видны в гардеробе. Некоторые прячутся, пока ты их не найдёшь. Так что продолжай играть и смотри в оба.","modes_eyebrow":"Режимы","modes_h2":"Ещё два способа играть.","modes_lede":"Когда захочется отдохнуть от уровней, сразись со временем или играй сразу в двух коробках.","rush_t":"Спринт","rush_p":"На часах 60 секунд. Каждый пройденный уровень добавляет 10 секунд, каждый удар отнимает 3. Как далеко ты зайдёшь?","vid_rush":"Режим «Спринт»: таймер идёт, пока проходятся уровни","mirror_t":"Зеркало","mirror_p":"Две коробки, один бросок. Целься в нижней коробке, а верхний мяч повторяет за тобой, отражённый слева направо. Доведи оба до цели.","vid_mirror":"Режим «Зеркало»: один прицел двигает два мяча в двух коробках","levels_h3":"Уровни, созданные для тебя.","levels_p":"Уровни каждого игрока строятся из его собственного случайного зерна, так что никто не играет в те же коробки, что и ты. Переигрывай любой уровень из календаря уровней, чтобы забрать пропущенные звёзды, и следи, как сложность растёт от «Легко» до «Очень сложно».","more_eyebrow":"И это ещё не всё","more_h2":"Мелочи, которые делают игру твоей.","f1_t":"Достижения и рекорды","f1_p":"От первого отскока до лучшего забега в «Спринте» — всё учитывается.","f2_t":"Режим помощи","f2_p":"Застрял? Прицел притягивается к удачным броскам, а мяч-призрак может показать бросок, который сработает.","f3_t":"10 языков","f3_p":"English, Deutsch, Français, Italiano, 日本語, 한국어, Português, Русский, Español, Türkçe.","f4_t":"Воин гардероба","f4_p":"Достижение для тех, кто собрал абсолютно все скины.","f5_t":"Светлая и тёмная тема","f5_p":"Выбирай вид, который нравится, а на телефоне — со звуками и вибрацией.","f6_t":"Секреты в доме","f6_p":"В доме Мяча спрятано несколько скинов. Поищи хорошенько.","inbox_eyebrow":"Новое","inbox_h3":"Входящие и Подарки.","inbox_p":"Новости игры приходят во «Входящие». Подарки от команды Ball и награды за промокоды ждут тебя в «Подарках». Есть идея? Настройки → Отправить отзыв — и она придёт прямо к нам.","app_eyebrow":"Без загрузки","app_h2":"Играй как в приложение.","app_lede":"Открой Ball на телефоне и добавь его на главный экран. Игра откроется на весь экран, а прогресс сохранится на устройстве автоматически.","ios_t":"iPhone или iPad (Safari)","ios":"Нажми <span class=\"kbd\">Поделиться</span>, затем <span class=\"kbd\">На экран «Домой»</span>.","and_t":"Android (Chrome)","and":"Нажми <span class=\"kbd\">⋮</span>, затем <span class=\"kbd\">Добавить на главный экран</span> или <span class=\"kbd\">Установить приложение</span>.","pc_t":"Компьютер","pc":"Играй прямо в браузере. Нажми и тяни, чтобы прицелиться.","fin_h2":"Твой первый уровень уже ждёт.","fin_p":"Бесплатно, в браузере, на любом телефоне или компьютере.","fin_btn":"Играть в Ball","foot_fb":"Идеи или отзыв?","foot_made":"Автор: Enzo Augusto"},"es":{"title":"Ball: apunta, lanza y rebota hasta la meta","desc":"Ball es un rompecabezas de física gratis que se juega con un solo toque, en el navegador. Apunta, lanza y haz que Ball rebote hasta la meta en 999 niveles, con 36 skins para coleccionar.","nav_how":"Cómo jugar","nav_skins":"Skins","nav_modes":"Modos","nav_more":"Más","play":"Jugar","theme_aria":"Cambiar entre modo claro y oscuro","lang_aria":"Idioma","brand_aria":"Ball, volver arriba","nav_aria":"Secciones","free":"Gratis, directamente en tu navegador","h1":"Apunta. Lanza. <span class=\"b\">Rebota</span> hasta la meta.","lede":"Ball es un rompecabezas de física de un solo toque. Tira hacia atrás, suelta y usa las paredes para hacer carambolas y meter a Ball en la meta con los menos tiros posibles.","cta_play":"Jugar gratis ahora","cta_how":"Ver cómo funciona","chip_levels":"<b>999</b> niveles","chip_skins":"<b>36</b> skins y secretos","chip_lang":"<b>10</b> idiomas","chip_stars":"Estrellas por conseguir","toast_small":"Nivel 11","toast":"¡Nivel superado!","vid_play":"Un nivel de Ball: apuntar, rebotar en un trampolín, pulsar los botones numerados y llegar a la meta","how_eyebrow":"Cómo jugar","how_h2":"Tres movimientos. Ese es todo el juego.","how_lede":"Lo entenderás en diez segundos. Dominar 999 niveles lleva un poco más.","s1_t":"Tira hacia atrás","s1_d":"Toca cualquier parte del tablero y tira. La línea de puntos muestra exactamente adónde volará Ball.","s2_t":"Suelta","s2_d":"Ball sale disparada y rebota en paredes y trampolines, frenando un poco con cada golpe.","s3_t":"Abre la meta y entra","s3_d":"Desde el nivel 2 la meta empieza cerrada. Pulsa todos los botones para abrirla y luego rueda adentro. Menos tiros dan más estrellas.","meet_aria":"Lo que encontrarás en el tablero","meet_btn":"Botones, algunos numerados","meet_pad":"Trampolines","meet_spike":"Pinchos que pican","meet_tp":"Teletransportadores","meet_stars":"Hasta 3 estrellas por nivel","vid_how":"Partida: apuntar, lanzar, meta","sk_eyebrow":"El armario","sk_h2":"<span class=\"w\">¡Montones de</span> <span class=\"w\">personalización!</span>","sk_lede":"Desbloquea 36 skins solo con jugar. Cada una tiene su propia estela, su efecto de lanzamiento y pequeños extras flotando alrededor de Ball.","marquee_aria":"Algunas skins de Ball","legendary":"Legendaria","trails_tag":"Mismo tiro, tres skins","vid_trails":"Glitch Mode, Eight Ball y Disco Ball lanzadas en el mismo nivel, cada una dejando una estela distinta","trails_h3":"Cada skin vuela a su manera.","trails_p":"Una ráfaga de píxeles con fallos, un rastro de polvo de tiza, una lluvia de destellos de discoteca. Elige una skin y cada lanzamiento, rebote y meta se ve distinto.","secret_alt":"Ball guiñando un ojo junto a dos skins misteriosas con signos de interrogación","secret_t":"Psst… hay más.","secret_p":"No todas las skins aparecen en el armario. Algunas se quedan ocultas hasta que las encuentras. Así que sigue jugando y mantén los ojos abiertos.","modes_eyebrow":"Modos","modes_h2":"Dos formas más de jugar.","modes_lede":"Cuando quieras un descanso de los niveles, corre contra el reloj o juega en dos cajas a la vez.","rush_t":"Rush","rush_p":"60 segundos en el reloj. Cada nivel superado suma 10 segundos y cada golpe resta 3. ¿Hasta dónde llegarás?","vid_rush":"Modo Rush: el reloj corre mientras se superan niveles","mirror_t":"Espejo","mirror_p":"Dos cajas, un tiro. Apunta en la caja de abajo y la bola de arriba te copia, invertida de izquierda a derecha. Lleva las dos a la meta.","vid_mirror":"Modo Espejo: un solo tiro mueve dos bolas en dos cajas","levels_h3":"Niveles hechos solo para ti.","levels_p":"Los niveles de cada jugador se crean a partir de su propia semilla aleatoria, así que nadie juega las mismas cajas que tú. Vuelve a jugar cualquier nivel desde el calendario de niveles para conseguir las estrellas que te faltan, y mira cómo sube la dificultad de Fácil a Superdifícil.","more_eyebrow":"Y aún hay más","more_h2":"Pequeños detalles que lo hacen tuyo.","f1_t":"Logros y récords","f1_p":"Desde tu primer rebote hasta tu mejor partida de Rush, todo cuenta.","f2_t":"Modo asistido","f2_p":"¿Atascado? La puntería se ajusta a los buenos tiros y una bola fantasma puede enseñarte uno que funciona.","f3_t":"10 idiomas","f3_p":"English, Deutsch, Français, Italiano, 日本語, 한국어, Português, Русский, Español, Türkçe.","f4_t":"Guerrero del armario","f4_p":"Un logro para quienes coleccionan absolutamente todas las skins.","f5_t":"Claro y oscuro","f5_p":"Elige el aspecto que más te guste, con efectos de sonido y vibración en el móvil.","f6_t":"Secretos en la casa","f6_p":"La casa de Ball esconde un par de skins. Echa un vistazo.","inbox_eyebrow":"Nuevo","inbox_h3":"Bandeja de entrada y Regalos.","inbox_p":"Las novedades del juego llegan a tu Bandeja de entrada. Los regalos del equipo de Ball y las recompensas de los códigos promocionales te esperan en Regalos. ¿Tienes una idea? Ajustes → Enviar comentarios nos llega directamente.","app_eyebrow":"Sin descargas","app_h2":"Juega como en una app.","app_lede":"Abre Ball en tu móvil y añádelo a la pantalla de inicio. Se abre a pantalla completa y tu progreso se guarda automáticamente en tu dispositivo.","ios_t":"iPhone o iPad (Safari)","ios":"Toca <span class=\"kbd\">Compartir</span> y luego <span class=\"kbd\">Añadir a pantalla de inicio</span>.","and_t":"Android (Chrome)","and":"Toca <span class=\"kbd\">⋮</span> y luego <span class=\"kbd\">Añadir a pantalla de inicio</span> o <span class=\"kbd\">Instalar aplicación</span>.","pc_t":"Ordenador","pc":"Se juega directamente en el navegador. Haz clic y arrastra para apuntar.","fin_h2":"Tu primer nivel te está esperando.","fin_p":"Gratis, en tu navegador, en cualquier móvil u ordenador.","fin_btn":"Jugar a Ball","foot_fb":"¿Ideas o comentarios?","foot_made":"Creado por Enzo Augusto"},"tr":{"title":"Ball: nişan al, fırlat, hedefe sektir","desc":"Ball, tarayıcında oynayabileceğin ücretsiz, tek dokunuşlu bir fizik bulmacası. Nişan al, fırlat ve 999 seviye boyunca Ball’u hedefe sektir; toplanacak 36 kostüm seni bekliyor.","nav_how":"Nasıl oynanır","nav_skins":"Kostümler","nav_modes":"Modlar","nav_more":"Daha fazla","play":"Oyna","theme_aria":"Açık ve koyu mod arasında geçiş yap","lang_aria":"Dil","brand_aria":"Ball, başa dön","nav_aria":"Bölümler","free":"Ücretsiz, doğrudan tarayıcında","h1":"Nişan al. Fırlat. Hedefe <span class=\"b\">sektir</span>.","lede":"Ball, tek dokunuşla oynanan bir fizik bulmacası. Geri çek, bırak ve duvarlardan bant atışları yaparak Ball’u olabildiğince az atışla hedefe ulaştır.","cta_play":"Şimdi ücretsiz oyna","cta_how":"Nasıl çalıştığını gör","chip_levels":"<b>999</b> seviye","chip_skins":"<b>36</b> kostüm ve sırlar","chip_lang":"<b>10</b> dil","chip_stars":"Kazanılacak yıldızlar","toast_small":"Seviye 11","toast":"Seviye geçildi!","vid_play":"Ball’dan bir seviye: nişan alma, bir pedden sekme, numaralı düğmelere basma ve hedefe girme","how_eyebrow":"Nasıl oynanır","how_h2":"Üç hamle. Oyunun hepsi bu.","how_lede":"On saniyede kaparsın. 999 seviyede ustalaşmak biraz daha uzun sürer.","s1_t":"Geri çek","s1_d":"Tahtada herhangi bir yere dokun ve çek. Kesikli çizgi Ball’un tam olarak nereye uçacağını gösterir.","s2_t":"Bırak","s2_d":"Ball fırlar, duvarlardan ve pedlerden seker ve her çarpmada biraz yavaşlar.","s3_t":"Hedefi aç, içine gir","s3_d":"2. seviyeden itibaren hedef kilitli başlar. Açmak için tüm düğmelere bas, sonra içine yuvarlan. Daha az atış, daha çok yıldız demek.","meet_aria":"Tahtada karşılaşacakların","meet_btn":"Düğmeler, bazıları numaralı","meet_pad":"Zıplatma pedleri","meet_spike":"Batan dikenler","meet_tp":"Işınlayıcılar","meet_stars":"Seviye başına 3 yıldıza kadar","vid_how":"Oynanış: nişan, atış, hedef","sk_eyebrow":"Gardırop","sk_h2":"<span class=\"w\">Bir sürü</span> <span class=\"w\">kişiselleştirme!</span>","sk_lede":"Sadece oynayarak 36 kostüm aç. Her birinin kendi izi, kendi fırlatma efekti ve Ball’un etrafında süzülen küçük süsleri var.","marquee_aria":"Ball’daki kostümlerden bazıları","legendary":"Efsanevi","trails_tag":"Aynı atış, üç kostüm","vid_trails":"Glitch Mode, Eight Ball ve Disco Ball aynı seviyede fırlatılıyor; her biri farklı bir iz bırakıyor","trails_h3":"Her kostüm kendine has uçar.","trails_p":"Bir patlama bozuk piksel, bir şerit tebeşir tozu, bir yağmur disko pırıltısı. Bir kostüm seç; her atış, her sekme ve her gol farklı görünsün.","secret_alt":"Soru işaretli iki gizemli kostümün yanında göz kırpan Ball","secret_t":"Pst… dahası var.","secret_p":"Her kostüm gardıropta görünmez. Bazıları sen bulana kadar saklı kalır. O yüzden oynamaya devam et ve gözünü dört aç.","modes_eyebrow":"Modlar","modes_h2":"İki oyun yolu daha.","modes_lede":"Seviyelere ara vermek istediğinde zamana karşı yarış ya da aynı anda iki kutuda oyna.","rush_t":"Rush","rush_p":"Saatte 60 saniye. Geçtiğin her seviye 10 saniye ekler, her çarpma 3 saniye götürür. Ne kadar ileri gidebilirsin?","vid_rush":"Rush modu: seviyeler geçilirken süre akıyor","mirror_t":"Ayna","mirror_p":"İki kutu, tek atış. Alttaki kutuda nişan al; üstteki top seni soldan sağa ters çevrilmiş şekilde taklit eder. İkisini de hedefe ulaştır.","vid_mirror":"Ayna modu: tek nişan, iki kutuda iki topu hareket ettirir","levels_h3":"Sadece senin için yapılmış seviyeler.","levels_p":"Her oyuncunun seviyeleri kendi rastgele tohumundan üretilir; yani kimse seninle aynı kutuları oynamaz. Kaçırdığın yıldızlar için Seviyeler takviminden istediğin seviyeyi tekrar oyna ve zorluğun Kolay’dan Çok Zor’a tırmanışını izle.","more_eyebrow":"Dahası da var","more_h2":"Oyunu senin yapan küçük şeyler.","f1_t":"Başarımlar ve rekorlar","f1_p":"İlk sekmenden en iyi Rush oyununa kadar her şey sayılır.","f2_t":"Yardımlı mod","f2_p":"Takıldın mı? Nişan iyi atışlara oturur ve hayalet bir top işe yarayan bir atışı gösterebilir.","f3_t":"10 dil","f3_p":"English, Deutsch, Français, Italiano, 日本語, 한국어, Português, Русский, Español, Türkçe.","f4_t":"Gardırop Savaşçısı","f4_p":"Kostümlerin hepsini, tek tek toplayanlar için bir başarım.","f5_t":"Açık ve koyu","f5_p":"Beğendiğin görünümü seç; telefonda ses efektleri ve titreşimle birlikte.","f6_t":"Evdeki sırlar","f6_p":"Ball’un evinde birkaç kostüm saklı. Etrafı kurcala.","inbox_eyebrow":"Yeni","inbox_h3":"Gelen kutusu ve Hediyeler.","inbox_p":"Oyunla ilgili haberler gelen kutuna düşer. Ball ekibinden hediyeler ve promosyon kodu ödülleri Hediyeler’de seni bekler. Bir fikrin mi var? Ayarlar → Geri bildirim gönder doğrudan bize ulaşır.","app_eyebrow":"İndirme yok","app_h2":"Bir uygulama gibi oyna.","app_lede":"Ball’u telefonunda aç ve ana ekranına ekle. Tam ekran açılır ve ilerlemen cihazına otomatik olarak kaydedilir.","ios_t":"iPhone veya iPad (Safari)","ios":"<span class=\"kbd\">Paylaş</span> simgesine, ardından <span class=\"kbd\">Ana Ekrana Ekle</span> seçeneğine dokun.","and_t":"Android (Chrome)","and":"<span class=\"kbd\">⋮</span> simgesine, ardından <span class=\"kbd\">Ana ekrana ekle</span> ya da <span class=\"kbd\">Uygulamayı yükle</span> seçeneğine dokun.","pc_t":"Bilgisayar","pc":"Doğrudan tarayıcıda oynanır. Nişan almak için tıklayıp sürükle.","fin_h2":"İlk seviyen seni bekliyor.","fin_p":"Ücretsiz, tarayıcında, her telefonda ve bilgisayarda.","fin_btn":"Ball oyna","foot_fb":"Fikir veya geri bildirim?","foot_made":"Yapan: Enzo Augusto"}}};/*/I18N*/
+(() => {
+  const $ = (s, r = document) => r.querySelector(s), $$ = (s, r = document) => [...r.querySelectorAll(s)];
+  const root = document.documentElement, reduce = matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+  /* ---------- light / dark ---------- */
+  const isDark = () => root.dataset.theme === 'dark';   // light unless dark was chosen
+  try { const s = localStorage.getItem('ballsite.theme'); if (s === 'dark' || s === 'light') root.dataset.theme = s; } catch (e) { }
+  const shots = () => { const d = isDark() ? 'dark' : 'light'; $$('img[data-th]').forEach(i => { i.src = 'media/shot-' + i.dataset.th + '-' + d + '.webp'; }); };
+  $('#theme').addEventListener('click', () => {
+    root.dataset.theme = isDark() ? 'light' : 'dark';
+    try { localStorage.setItem('ballsite.theme', root.dataset.theme); } catch (e) { }
+    shots();
+  });
+  shots();
+
+  /* ---------- skins marquee ---------- */
+  const SK = [['classic', 'Classic'], ['disguise', 'Perfect Disguise'], ['donut', 'Donut Disturb'], ['cowboy', 'Cowboy'], ['incognito', 'Incognito'], ['richie', 'Richie Rich'],
+    ['headliner', 'Headliner'], ['nightowl', 'Night Owl'], ['windup', 'Wind-Up'], ['diver', 'Deep Diver'], ['sprinter', 'Sprinter'], ['sushi', 'Sushi Roll'], ['captain', 'Captain Bounce'],
+    ['coconut', 'Coconut Cabana'], ['cadet', 'Space Cadet'], ['aquarium', 'Aquarium'], ['sherlock', 'Sherlock Roll'], ['patchwork', 'Patchwork'], ['wizard', 'Wizard Whirl'],
+    ['flower', 'Flower Power'], ['disco', 'Disco Ball'], ['royal', 'Royal Roller'], ['eight', 'Eight Ball'], ['lava', 'Lava Lamp'], ['glitch', 'Glitch Mode'], ['doodle', 'Doodle Ball'],
+    ['boba', 'Boba Buddy'], ['chef', 'Chef’s Special'], ['frostbite', 'Frostbite', 1], ['hothead', 'Hothead', 1], ['devil', 'Little Devil', 1], ['angel', 'Angelic Roll', 1],
+    ['bronze', 'Bronze'], ['silver', 'Silver'], ['gold', 'Gold'], ['cosmic', 'Cosmic']];
+  const card = ([id, name, leg]) => `<div class="sk${leg ? ' leg' : ''}"><span class="ball"><img src="media/skins/${id}.webp" alt="" loading="lazy" width="86" height="86"></span><b>${name}</b>${leg ? '<small data-i="legendary">Legendary</small>' : ''}</div>`;
+  const half = Math.ceil(SK.length / 2), a = SK.slice(0, half), b = SK.slice(half);
+  $('#lane1').innerHTML = [...a, ...a].map(card).join(''); $('#lane2').innerHTML = [...b, ...b].map(card).join('');
+  $$('.lane').forEach(l => { const n = l.children.length / 2; [...l.children].slice(n).forEach(c => c.setAttribute('aria-hidden', 'true')); });
+
+  /* ---------- languages: the same 10 as the game; picked from the browser on the first visit, then remembered ---------- */
+  const S = I18N.str, codes = I18N.langs.map(l => l[0]);
+  const pickLang = () => {
+    try { const s = localStorage.getItem('ballsite.lang'); if (S[s]) return s; } catch (e) { }
+    for (const l of (navigator.languages && navigator.languages.length ? navigator.languages : [navigator.language || 'en'])) {
+      const low = String(l).toLowerCase(); if (low.startsWith('pt')) return 'pt-BR'; const c = codes.find(x => x === low.slice(0, 2)); if (c) return c;
+    }
+    return 'en';
+  };
+  const sel = $('#lang'); sel.innerHTML = I18N.langs.map(([c, n]) => `<option value="${c}" lang="${c}">${n}</option>`).join('');
+  function applyLang(L) {
+    const D = S[L] || S.en, tx = k => D[k] != null ? D[k] : S.en[k];
+    root.lang = L; sel.value = L; $('#lang-code').textContent = L === 'pt-BR' ? 'PT' : L.toUpperCase();
+    $$('[data-i]').forEach(el => { const v = tx(el.dataset.i); if (v != null) el.innerHTML = v; });
+    $$('[data-ia]').forEach(el => { const v = tx(el.dataset.ia); if (v != null) el.setAttribute('aria-label', v); });
+    $$('[data-ialt]').forEach(el => { const v = tx(el.dataset.ialt); if (v != null) el.setAttribute('alt', v); });
+    const md = document.querySelector('meta[name="description"]'); if (md) md.setAttribute('content', tx('desc'));
+    $('.langpick').title = tx('lang_aria');
+    if (typeof build === 'function') requestAnimationFrame(build);   // text lengths change, so the aim line is redrawn
+  }
+  sel.addEventListener('change', () => { try { localStorage.setItem('ballsite.lang', sel.value); } catch (e) { } applyLang(sel.value); });
+
+  /* ---------- videos: play only while on screen ---------- */
+  const vids = $$('video');
+  const vio = 'IntersectionObserver' in window ? new IntersectionObserver(es => es.forEach(e => {
+    const v = e.target; if (e.isIntersecting && !v.closest('[hidden]')) { if (!v.src && v.dataset.src) v.src = v.dataset.src; v.play().catch(() => { }); } else v.pause();
+  }), { threshold: 0.15 }) : null;
+  vids.forEach(v => { if (vio) vio.observe(v); else { if (!v.src && v.dataset.src) v.src = v.dataset.src; v.play().catch(() => { }); } });
+
+  /* ---------- how-to steps jump the video ---------- */
+  const hv = $('#howvid');
+  $$('.step').forEach(s => s.addEventListener('click', () => {
+    $$('.step').forEach(x => x.classList.toggle('on', x === s));
+    try { hv.currentTime = +s.dataset.t; hv.play().catch(() => { }); } catch (e) { }
+  }));
+  hv.addEventListener('timeupdate', () => { const t = hv.currentTime, i = t < 2 ? 0 : t < 11.4 ? 1 : 2; $$('.step').forEach((x, k) => x.classList.toggle('on', k === i)); });
+
+  /* ---------- pop-in on first view ---------- */
+  if ('IntersectionObserver' in window && !reduce) {
+    const pio = new IntersectionObserver(es => es.forEach(e => { if (e.isIntersecting) { e.target.classList.add('go'); pio.unobserve(e.target); } }), { rootMargin: '0px 0px -8% 0px' });
+    $$('.pop').forEach(el => { const r = el.getBoundingClientRect(); if (r.top > innerHeight) pio.observe(el); });
+  }
+
+  /* ---------- the aim line: one dotted path through the page, Ball rides it as you scroll ---------- */
+  const main = $('main'), svg = $('#aim'), path = $('#aim-p'), done = $('#aim-d'), maskP = $('#aim-m'), rider = $('#rider'), fin = $('.finale');
+  let total = 0, scored = false;
+  function build() {
+    const mr = main.getBoundingClientRect(), W = mr.width, pts = [];
+    const narrow = W < 760, gx = narrow ? 14 : Math.max(26, (W - 1160) / 2 - 10);
+    $$('[data-way]').forEach(el => {
+      const r = el.getBoundingClientRect(), y = r.top - mr.top, w = el.dataset.way;
+      if (w === 'start') pts.push([r.left - mr.left + 30, y + r.height / 2]);
+      else if (w === 'end') pts.push([r.left - mr.left + r.width / 2, y + r.height / 2]);
+      else if (w === 'l') pts.push([narrow ? gx : Math.max(gx, r.left - mr.left - 40), y + r.height / 2]);
+      else pts.push([narrow ? W - gx : Math.min(W - gx, r.right - mr.left + 40), y + r.height / 2]);
+    });
+    pts.sort((p, q) => p[1] - q[1]);
+    let d = `M${pts[0][0].toFixed(1)},${pts[0][1].toFixed(1)}`;
+    for (let i = 0; i < pts.length - 1; i++) {   // smooth curve through the points
+      const p0 = pts[i - 1] || pts[i], p1 = pts[i], p2 = pts[i + 1], p3 = pts[i + 2] || p2, k = 0.18;
+      d += ` C${(p1[0] + (p2[0] - p0[0]) * k).toFixed(1)},${(p1[1] + (p2[1] - p0[1]) * k).toFixed(1)} ${(p2[0] - (p3[0] - p1[0]) * k).toFixed(1)},${(p2[1] - (p3[1] - p1[1]) * k).toFixed(1)} ${p2[0].toFixed(1)},${p2[1].toFixed(1)}`;
+    }
+    [path, done, maskP].forEach(p => p.setAttribute('d', d));
+    total = path.getTotalLength(); svg.setAttribute('viewBox', `0 0 ${W} ${mr.height}`);
+    maskP.setAttribute('stroke-dasharray', `0 ${total + 10}`);
+    tick();
+  }
+  function tick() {
+    if (!total) return;
+    const mr = main.getBoundingClientRect(), fr = fin.getBoundingClientRect();
+    // progress: 0 at the top, 1 once the goal sits mid-screen, or at the very bottom of the page if that comes first,
+    // so Ball always makes it all the way into the goal
+    const y = -mr.top, mainTop = mr.top + scrollY, maxY = document.documentElement.scrollHeight - innerHeight - mainTop;
+    const endY = Math.max(1, Math.min((fr.top - mr.top) + 240 - innerHeight * 0.55, maxY - 2));
+    const pr = Math.max(0, Math.min(1, y / endY));
+    const L = pr * total, pt = path.getPointAtLength(L), ah = path.getPointAtLength(Math.min(total, L + 4));
+    maskP.setAttribute('stroke-dasharray', `${L} ${total + 10}`);
+    const ang = Math.atan2(ah.y - pt.y, ah.x - pt.x);
+    rider.style.transform = `translate(${pt.x.toFixed(1)}px, ${pt.y.toFixed(1)}px)`;   // Ball stays upright; his eyes show which way he's rolling
+    const face = pr >= 0.995 ? 'happy' : Math.abs(Math.cos(ang)) > 0.6 ? (Math.cos(ang) < 0 ? 'left' : 'right') : 'up';
+    if (rider.dataset.f !== face) { rider.dataset.f = face; rider.src = 'media/ball_' + face + '.webp'; }
+    if (pr >= 0.995 && !scored) { scored = true; score(); } else if (pr < 0.9) scored = false;
+  }
+  function score() {
+    fin.classList.remove('scored'); void fin.offsetWidth; fin.classList.add('scored');
+    if (reduce) return; const g = $('#goalspot'), cols = ['#2f6dff', '#ff3b4e', '#ffc531', '#22b86a', '#8a72ff'];
+    for (let i = 0; i < 26; i++) { const c = document.createElement('i'), a = Math.random() * Math.PI * 2, d = 90 + Math.random() * 140; c.className = 'conf'; c.style.background = cols[i % cols.length]; c.style.setProperty('--x', Math.cos(a) * d + 'px'); c.style.setProperty('--y', Math.sin(a) * d + 'px'); c.style.setProperty('--r', (Math.random() * 720 - 360) + 'deg'); g.appendChild(c); setTimeout(() => c.remove(), 1200); }
+  }
+  let raf = 0; const onScroll = () => { if (!raf) raf = requestAnimationFrame(() => { raf = 0; tick(); parallax(); }); };
+  /* phones drift a little against the scroll */
+  const par = $$('[data-par]');
+  function parallax() { if (reduce) return; par.forEach(el => { const r = el.getBoundingClientRect(), c = r.top + r.height / 2 - innerHeight / 2; el.style.setProperty('--py', Math.max(-30, Math.min(30, -c * +el.dataset.par)).toFixed(1) + 'px'); }); }
+  addEventListener('scroll', onScroll, { passive: true });
+  addEventListener('resize', () => requestAnimationFrame(build));
+  if ('ResizeObserver' in window) new ResizeObserver(() => requestAnimationFrame(build)).observe(main);
+  addEventListener('load', build); applyLang(pickLang()); build(); parallax();
+})();
+</script>
+
+</body>
+</html>
